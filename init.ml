@@ -103,4 +103,3 @@ end);
 
 value gikia_public_dir = Filename.dirname Sys.argv.(0) ^/ "public";
 
-value () = print_endline gikia_public_dir;
