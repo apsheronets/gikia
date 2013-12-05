@@ -60,10 +60,10 @@ let of_changes ~title ~link make_iri prefix path changes =
   )
 
 let of_page ~title ~link make_iri prefix path =
-  Vcs.get_changes prefix ~count:50 ~path >>= fun changes ->
+  Vcs.get_changes prefix ~count:20 ~path >>= fun changes ->
   of_changes ~title ~link make_iri prefix path changes
 
 let of_repo ~title ~link make_iri prefix =
-  Vcs.get_changes prefix ~count:50 >>= fun changes ->
+  Vcs.get_changes prefix ~count:20 >>= fun changes ->
   of_changes ~title ~link make_iri prefix prefix changes
 
