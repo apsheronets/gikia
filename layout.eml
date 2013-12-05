@@ -1,0 +1,25 @@
+% open Lwt
+% open Utils
+% open Init
+% let f a content buf = (
+%   let read p =
+%     catch
+%       (fun () -> Io.read p)
+%       (fun _ -> return "") in
+%   read (prefix ^/ "footer.html") >|= fun footer ->
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+    <link type="text/css" rel="stylesheet" href="/style.css" />
+    <link rel="alternate" type="application/atom+xml" title="Recent changes to whole <%= a#hostname %>" href="?show=atom" />
+    <%=raw a#links %>
+    <title><%= a#title %></title>
+
+  </head>
+  <body>
+    <% content buf; %>
+    <%=raw footer %>
+  </body>
+
+</html>
+% )

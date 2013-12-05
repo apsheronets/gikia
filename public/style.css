@@ -1,0 +1,145 @@
+/*
+  Gikia's default stylesheets.
+  To replace it, add style.css in the root directory of your wiki.
+*/
+
+/* generic */
+
+body {
+  font-family: sans-serif,serif;
+  background: white;
+  margin: 2em 2em 2em 2em;
+}
+
+h1, h2, h3 {
+  font-weight: normal;
+  color: #005aa0;
+}
+
+h1 {
+  font-size: 200%;
+  border-bottom: dotted 1px;
+}
+
+h2 {
+  font-size: 130%;
+  padding-top: 1em;
+  border-bottom: dotted 1px;
+}
+
+h3 {
+  font-size: 100%;
+  padding-top: 1em;
+  color: #000000;
+  border-bottom: dotted 1px;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+th {
+  text-align: center;
+  font-weight: normal;
+}
+
+td {
+  border-width: 1px;
+  border-style: solid;
+  border-color: #666;
+}
+
+td, th {
+  padding: 0.3em 0.5em;
+}
+
+a:hover {
+  color:#CC0000;
+}
+
+a img {
+  border: 0;
+}
+
+img {
+  margin: 0.5em 1em 0.5em 1em;
+}
+
+table.history tr:nth-child(even) { background: #f0f0f0 }
+
+code.blockcode pre {
+  margin-left: 1.5em;
+  margin-right: 1.5em;
+  border: 1px solid #6185a0;
+  padding: 6px 6px;
+  color: #600000;
+  background: #f4f4f8;
+}
+
+blockquote {
+  margin-left:  1.5em
+  margin-right: 1.5em;
+  border-left: 1px solid #999;
+  padding-left: 1em;
+}
+
+div.toc {
+  background-color: #F9F9F9;
+  border: 1px solid #DBDBDB;
+  border-radius: 10px 10px 10px 10px;
+  font-size: 90%;
+  max-width: 450pt;
+  padding-right: 20pt;
+}
+
+/* page's history */
+
+table.history {
+  font-size: 80%;
+  border-width: 10px;
+}
+
+/* and it's changes */
+
+pre.diff {
+  white-space: pre-wrap; /* word wrap */
+  font-family: monospace;
+  margin-left: 1.5em;
+  margin-right: 1.5em;
+  border: 1px solid #6185a0;
+  padding: 6px 6px;
+  color: #600000;
+  background: #f4f4f8;
+}
+
+pre.diff del {
+  background: #FF99CC;
+  text-decoration: none;
+}
+
+pre.diff ins {
+  background: #99CC99;
+  text-decoration: none;
+}
+
+/* some links on a top of the page */
+
+table.header {
+  border-style: none;
+  width: 100%;
+}
+
+table.header td {
+  border-style: none;
+  padding: 0;
+}
+
+table.header td.breadcrumbs {
+  text-align: left;
+  padding: 0 1em 0 0;
+}
+
+table.header td.links {
+  text-align: right;
+}
+

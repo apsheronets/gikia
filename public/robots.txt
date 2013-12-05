@@ -1,0 +1,9 @@
+#
+# Gikia's default robots.txt file.
+# To replace it, add robots.txt file in the root directory of your wiki.
+#
+
+User-Agent: *
+Disallow: /_darcs/*
+Disallow: /.git/*
+

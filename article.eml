@@ -1,0 +1,6 @@
+% let f a buf = (
+  <% Header_table.f a buf; %>
+  <div id="content">
+    <%=raw a#content %>
+  </div>
+% )

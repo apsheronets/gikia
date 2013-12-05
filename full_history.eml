@@ -1,0 +1,27 @@
+% open Utils
+% let f a buf = begin
+  <h1><%= a#title %></h1>
+  <table class="history" style="width: 100%">
+    <tr>
+      <th>author</th>
+      <th>date</th>
+      <th>name</th>
+    </tr>
+    <% a#changes >> List.iter begin fun p -> %>
+    <tr>
+      <td><%= p.Vcs.author %></td>
+      <td>
+        <%= match p.Vcs.date with
+        | Vcs.Rfc s -> s
+        | Vcs.Calendar d -> rfc3339_of_calendar d %>
+      </td>
+      <td>
+        <a href="<%= url_to_full_change p.Vcs.hash %>"><%= p.Vcs.title %></a>
+        <% p.Vcs.comment >> List.iter begin fun s -> %>
+          <br /><%= s %>
+        <% end; %>
+      </td>
+    </tr>
+    <% end; %>
+  </table>
+% end

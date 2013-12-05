@@ -1,0 +1,4 @@
+% let f a buf = (
+  <h1><%= a#title %></h1>
+  <pre class="diff"><%=raw a#wdiff %></pre>
+% )
