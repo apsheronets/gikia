@@ -332,8 +332,12 @@ value my_func segpath rq =
     match default_host.val with
     [ "" -> hostname
     | s -> s ] in
-  let segpath = List.filter (fun [ "" -> False | _ -> True ]) segpath in
-  let segpath = List.map Cd_Strings.Strings.Onebyte.urldecode segpath in
+  let segpath =
+    segpath >>
+    List.filter (fun [ "" -> False | _ -> True ]) >>
+    List.map Cd_Strings.Strings.Onebyte.urldecode >>
+    (* stupid dtfilter *)
+    List.filter (fun x -> not (ExtLib.String.exists x "..")) in
   let params =
     match rq.rq_uri.Uri_type.query with
     [ None -> []
