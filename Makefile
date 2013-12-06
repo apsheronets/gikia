@@ -1,11 +1,10 @@
 PACKAGES = amall,lwt,lwt.extra,extlib,calendar,polebrush,polebrush.html,textile,textile.html,magic,camlp4.lib
-#emls = $(wildcard views/*.eml)
-emls = views/header_table.eml views/article.eml views/index.eml views/history.eml views/full_history.eml views/view_full_change.eml views/error.eml views/layout.eml views/view_change.eml
+emls = $(wildcard views/*.eml)
 views = $(emls:.eml=.ml)
 revised_files = simplexmlparser.ml init.ml gikia.ml
-original_files = utils.ml xmllexer.ml routes.ml views.ml highlight.ml io.ml parsercomb.ml vcs.ml $(views) markup.ml atom.ml
+original_files = $(views) utils.ml xmllexer.ml routes.ml views.ml highlight.ml io.ml parsercomb.ml vcs.ml markup.ml atom.ml
 ocamllex_files = xmllexer.mll
-all_files = utils.ml xmllexer.ml simplexmlparser.ml io.ml highlight.ml markup.ml init.ml parsercomb.ml vcs.ml views/layout.ml routes.ml views.ml views/header_table.ml views/article.ml views/index.ml views/history.ml views/full_history.ml views/view_full_change.ml views/error.ml views/view_change.ml atom.ml gikia.ml
+all_files = $(views) $(revised_files) $(original_files)
 
 NAME = gikia
 CAMLC   = ocamlfind ocamlc   -I views/ -thread $(LIB)
@@ -26,10 +25,10 @@ OPTOBJS = $(all_files:.ml=.cmx)
 all: $(NAME) $(NAME).opt
 
 $(NAME): $(OBJS)
-	$(CAMLC) -linkpkg -o $@ $^
+	$(CAMLC) -linkpkg -o $@ `ocamldep-sorter < .depend $^`
 
 $(NAME).opt: $(OPTOBJS)
-	$(CAMLOPT) -linkpkg -o $@ $^
+	$(CAMLOPT) -linkpkg -o $@ `ocamldep-sorter < .depend $^`
 
 highlight.ml: highlight.stub.ml
 	ln -f highlight.stub.ml $@
