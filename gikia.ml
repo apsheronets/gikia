@@ -120,12 +120,22 @@ value render_index hostname prefix _p =
     else if filename.[0] = '.'
       then True
       else False in
-  let files = Sys.readdir (get_path prefix _p) in
+  (Lwt_unix.opendir (get_path prefix _p) >>= fun dh ->
+    let rec loop acc =
+      catch
+        (fun () ->
+          Lwt_unix.readdir dh >>= fun file ->
+          loop [file::acc])
+        (fun
+          [ End_of_file ->
+              Lwt_unix.closedir dh >>= fun () -> return acc
+          | e -> fail e]) in
+    loop [])
+  >>= fun files ->
   (match files with
-  [ [||] -> return "" (* FIXME *)
+  [ [] -> return "" (* FIXME *)
   | files ->
       (files >>
-      Array.to_list >>
       List.filter (fun x -> not (invisible x)) >>
       Lwt_list.map_p
         (fun x ->
@@ -266,7 +276,8 @@ value main_handler hostname _p =
           return & send_ok_with body ]
   | Io.NotExists ->
       let path = gikia_public_dir ^/ params_to_string _p in
-      if (Sys.file_exists path)
+      Io.file_exists path >>= fun file_exists ->
+      if file_exists
       then return & send_file path
       else
         (*match _p with

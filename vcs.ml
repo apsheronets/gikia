@@ -331,34 +331,34 @@ type vcs = Darcs | Git
 
 (* Returns used VCS *)
 let vcs repodir =
-  if Sys.file_exists (repodir ^/ "_darcs") then Darcs
-  else if Sys.file_exists (repodir ^/ ".git") then Git
-  else raise (Failure (sprintf "can't detect any VCS in %S" repodir))
+  Io.file_exists (repodir ^/ "_darcs") >>= function true -> return Darcs | false ->
+  Io.file_exists (repodir ^/ ".git") >>= function true -> return Git | false ->
+  fail (Failure (sprintf "can't detect any VCS in %S" repodir))
 
 let get_changes ?first ?count ?path repodir =
-  match vcs repodir with
+  vcs repodir >>= function
   | Darcs -> Darcs.get_changes ?first ?count ?path repodir
   | Git   -> Git.get_changes   ?first ?count ?path repodir
 
-let get_diff repodir =
-  match vcs repodir with
-  | Darcs -> Darcs.get_diff repodir
-  | Git   -> Git.get_diff repodir
+let get_diff repodir page hash =
+  vcs repodir >>= function
+  | Darcs -> Darcs.get_diff repodir page hash
+  | Git   -> Git.get_diff repodir page hash
 
-let get_full_diff repodir =
-  match vcs repodir with
-  | Darcs -> Darcs.get_full_diff repodir
-  | Git   -> Git.get_full_diff repodir
+let get_full_diff repodir hash =
+  vcs repodir >>= function
+  | Darcs -> Darcs.get_full_diff repodir hash
+  | Git   -> Git.get_full_diff repodir hash
 
-let get_wdiff repodir =
-  match vcs repodir with
-  | Darcs -> Darcs.get_wdiff repodir
-  | Git   -> Git.get_wdiff repodir
+let get_wdiff repodir page hash =
+  vcs repodir >>= function
+  | Darcs -> Darcs.get_wdiff repodir page hash
+  | Git   -> Git.get_wdiff repodir page hash
 
-let where_file_leaves repodir =
-  match vcs repodir with
-  | Darcs -> Darcs.where_file_leaves repodir
-  | Git   ->   Git.where_file_leaves repodir
+let where_file_leaves repodir _a _r =
+  vcs repodir >>= function
+  | Darcs -> Darcs.where_file_leaves repodir _a _r
+  | Git   ->   Git.where_file_leaves repodir _a _r
 
 open Parsercomb
 open ExtLib

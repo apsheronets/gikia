@@ -51,7 +51,11 @@ let try_read_file p =
     (fun () -> read p)
     (fun _ -> Lwt.return "")
 
-(* not cooperative functions *)
+let file_exists path =
+  catch
+    (fun () ->
+      Lwt_unix.lstat path >>= fun _ -> return true)
+    (function _ -> return false)
 
 (* Getting type of a file with magic library *)
 let magic_cookie =
