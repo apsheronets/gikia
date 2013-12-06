@@ -376,11 +376,10 @@ let xhtml_of_wdiff str =
   let str =
     let cut =
       let diff_cmd =
-        let p_ws = p_pred (fun c -> c = ' ' || c = '\t' || c = '\n') in
-        let p_wss = p_many p_ws in
+        let p_eol = p_pred (fun c -> c = '\n') in
         (* example: *)
-        p_str "{---" >>> p_wss >>> p_str_until p_ws >>> p_wss >>>
-        p_str "{+++" >>> p_wss >>> p_str_until p_ws >>> p_wss >>> p_str_until p_ws >>> p_wss >>> p_str_until p_ws >>> p_wss >>> p_str_until p_ws >>> p_wss >>>
+        p_str "{---" >>> p_str_until p_eol >>>
+        p_str "{+++" >>> p_str_until p_eol >>>
         return () in
       p_str_until_p diff_cmd >>= fun (before, _) ->
       p_rest >>= fun rest ->
@@ -394,6 +393,7 @@ let xhtml_of_full_wdiff s =
   let markup_diff =
     let diff_cmd =
       let p_ws = p_pred (fun c -> c = ' ' || c = '\t' || c = '\n') in
+      let p_eol = p_pred (fun c -> c = '\n') in
       let p_wss = p_many p_ws in
       (* example: *)
       (* diff -rN -u old-k.b.n/ru/генерация-биткоинов new-k.b.n/ru/генерация-биткоинов *)
@@ -402,9 +402,8 @@ let xhtml_of_full_wdiff s =
       p_str_until p_ws >>= fun path1 ->
       p_wss >>>
       p_str_until p_ws >>= fun path2 ->
-      p_wss >>> p_str "{---" >>> p_wss >>> p_str_until p_ws >>>
-      p_wss >>> p_str "{+++" >>> p_wss >>> p_str_until p_ws >>>
-      p_wss >>> p_str_until p_ws >>> p_wss >>> p_str_until p_ws >>> p_wss >>> p_str_until p_ws >>> p_wss >>>
+      p_str "{---" >>> p_str_until p_eol >>>
+      p_str "{+++" >>> p_str_until p_eol >>>
       return path2 in
     let diffs =
       let end_of_diff =
