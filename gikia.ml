@@ -183,11 +183,9 @@ value render_500 =
     end in
   render (Error.f a);
 
-(* vvv amall kludges vvv *)
 open Amall_http;
 module IO = IO_Lwt;
 module I = Iteratees.Make(IO);
-(* ^^^ amall kludges ^^^ *)
 
 value send_404 =
   { rs_status_code = 404
@@ -313,7 +311,6 @@ value send_atom hostname _p =
   Atom.of_page ~title ~link make_iri prefix _a >>= fun atom ->
   return & send_ok_with ~content_type:"application/atom+xml" atom;
 
-(* vvv amall kludges vvv *)
 open Am_All;
 open Amall_types;
 
@@ -372,4 +369,3 @@ value my_func segpath rq =
 value () = S.mount_http my_endpoint my_func;
 
 value () = S.listener_run my_listener;
-(* ^^^ amall kludges ^^^ *)
