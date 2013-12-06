@@ -77,3 +77,6 @@ let kind_of_file path params =
     | _ -> Other
   with Magic.Failure _ -> Other
 
+let kind_of_file path params =
+  let f params = kind_of_file path params in
+  Lwt_preemptive.detach f params

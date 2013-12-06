@@ -121,21 +121,25 @@ value render_index hostname prefix _p =
       then True
       else False in
   let files = Sys.readdir (get_path prefix _p) in
-  Lwt_list.fold_left_s
-    (fun acc x ->
-      let path = get_path prefix (_p @ [x]) in
-      if invisible x then
-        return acc
-      else
-        match Io.kind_of_file path (_p @ [x]) with
-        [ Io.Page ->
-            Markup.get_header_of_page path >>= fun
-            [ Some s -> return s
-            | None   -> return x ]
-        | Io.Dir -> return (x ^ "/")
-        | _ -> return x ] >>= fun title ->
-        return ("<li>" ^ link_to (params_to_string (_p @ [x])) title ^ "</li>" ^ acc)
-    ) "" (Array.to_list files) >>= fun lis ->
+  (match files with
+  [ [||] -> return "" (* FIXME *)
+  | files ->
+      (files >>
+      Array.to_list >>
+      List.filter (fun x -> not (invisible x)) >>
+      Lwt_list.map_p
+        (fun x ->
+          let path = get_path prefix (_p @ [x]) in
+          Io.kind_of_file path (_p @ [x]) >>= (fun
+          [ Io.Page ->
+              Markup.get_header_of_page path >>= fun
+              [ Some s -> return s
+              | None   -> return x ]
+          | Io.Dir -> return (x ^ "/")
+          | _ -> return x ] ) >>= fun title ->
+          return ("<li>" ^ link_to (params_to_string (_p @ [x])) title ^ "</li>")
+        ) ) >>= fun lis ->
+      return & String.concat "" lis ] ) >>= fun lis ->
   let dirname =
     params_to_string _p in
   let title = "Index of " ^ dirname in
@@ -242,7 +246,7 @@ value send_ok_with ?content_type body =
 
 value main_handler hostname _p =
   let _a = get_path prefix _p in
-  match Io.kind_of_file _a _p with
+  Io.kind_of_file _a _p >>= fun
   [ Io.Page when (try List.last _p = "index" with _ -> False) ->
       (* do not handle /path/index *)
       return & redirect_to & params_to_string &
@@ -255,7 +259,7 @@ value main_handler hostname _p =
   | Io.Dir ->
       let index_a = _a ^/ "index" in
       let index_p = _p @ ["index"] in
-      match Io.kind_of_file index_a index_p with
+      Io.kind_of_file index_a index_p >>= fun
       [ Io.Page ->
           render_article hostname index_a index_p >>= fun body ->
           return & send_ok_with body
@@ -283,7 +287,7 @@ value main_handler hostname _p =
 
 value send_source _p =
   let _a = get_path prefix _p in
-  match Io.kind_of_file _a _p with
+  Io.kind_of_file _a _p >>= fun
   [ Io.Page ->
       return & send_file ~content_type:"text/plain" _a
   | Io.NotExists ->
