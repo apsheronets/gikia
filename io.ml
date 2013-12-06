@@ -30,10 +30,7 @@ let string_of_cmd (name, args) =
   Array.iter (bprintf b " %S") args;
   Buffer.contents b
 
-let counter = ref 0
-
 let exec ?(timeout=timeout) cmd =
-  printf "%s%!" (string_of_cmd cmd); (* TODO: add debug here *)
   let p = Lwt_process.open_process_full ~timeout cmd in
   Lwt_io.read p#stdout >>= fun out ->
   Lwt_io.read p#stderr >>= fun err ->
