@@ -1,6 +1,5 @@
 PACKAGES = amall,lwt,lwt.extra,extlib,calendar,polebrush,polebrush.html,textile,textile.html,magic,camlp4.lib
 #emls = $(wildcard views/*.eml)
-#emls = $(wildcard *.eml)
 emls = views/header_table.eml views/article.eml views/index.eml views/history.eml views/full_history.eml views/view_full_change.eml views/error.eml views/layout.eml views/view_change.eml
 views = $(emls:.eml=.ml)
 revised_files = simplexmlparser.ml init.ml gikia.ml

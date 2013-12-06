@@ -46,6 +46,11 @@ let read path =
     (fun inp ->
       Lwt_io.read inp)
 
+let try_read_file p =
+  Lwt.catch
+    (fun () -> read p)
+    (fun _ -> Lwt.return "")
+
 (* not cooperative functions *)
 
 (* Getting type of a file with magic library *)

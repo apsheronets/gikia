@@ -1,12 +1,7 @@
 % open Lwt
 % open Utils
-% open Init
-% let f a content buf = (
-%   let read p =
-%     catch
-%       (fun () -> Io.read p)
-%       (fun _ -> return "") in
-%   read (prefix ^/ "footer.html") >|= fun footer ->
+% let f a content buf =
+%   Io.try_read_file (Init.prefix ^/ "footer.html") >|= fun footer ->
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
@@ -22,4 +17,3 @@
   </body>
 
 </html>
-% )

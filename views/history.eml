@@ -1,5 +1,6 @@
 % open Utils
-% let f a buf = begin
+% open Vcs
+% let f a buf =
   <% Header_table.f a buf; %>
   <h1><%= a#title %></h1>
   <table class="history" style="width: 100%">
@@ -10,19 +11,18 @@
     </tr>
     <% a#changes >> List.iter begin fun p -> %>
     <tr>
-      <td><%= p.Vcs.author %></td>
+      <td><%= p.author %></td>
       <td>
-        <%= match p.Vcs.date with
-        | Vcs.Rfc s -> s
-        | Vcs.Calendar d -> rfc3339_of_calendar d %>
+        <%= match p.date with
+        | Rfc s -> s
+        | Calendar d -> rfc3339_of_calendar d %>
       </td>
       <td>
         <a href="<%= url_to_change a#_p p.Vcs.hash %>"><%= p.Vcs.title %></a>
-        <% p.Vcs.comment >> List.iter begin fun s -> %>
+        <% p.comment >> List.iter begin fun s -> %>
           <br /><%= s %>
         <% end; %>
       </td>
     </tr>
     <% end; %>
   </table>
-% end

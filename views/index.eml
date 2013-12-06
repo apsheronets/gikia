@@ -1,9 +1,8 @@
 % open Utils
-% let f a buf = begin
+% let f a buf =
   <% Header_table.f a buf; %>
   <h1><%= a#title %></h1>
   <% (match a#lis with
-  | "" -> %><h1>Empty</h1><%
-  | lis -> %><ul><%=raw lis %></ul>
+  | "" -> %>  <h1>Empty</h1><%
+  | lis -> %> <ul><%=raw lis %></ul>
   <% ); %>
-% end
