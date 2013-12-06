@@ -430,10 +430,9 @@ let xhtml_of_full_wdiff s =
           acc ^ "\n" ^ link ^ "\n" ^ (markup_changes diff))
         ""
         diffs in
-    return (prelude ^ diffs) in
+    return (esc prelude ^ diffs) in
   match markup_diff (s, 0) with
   | Parsed (r, _) -> r
-  | Failed ->
+  | Failed -> esc s
       (* FIXME: add error to log *)
-      s
 
