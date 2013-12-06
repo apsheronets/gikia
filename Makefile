@@ -1,17 +1,17 @@
 PACKAGES = amall,lwt,lwt.extra,extlib,calendar,polebrush,polebrush.html,textile,textile.html,magic,camlp4.lib
 #emls = $(wildcard views/*.eml)
 #emls = $(wildcard *.eml)
-emls = header_table.eml article.eml index.eml history.eml full_history.eml view_full_change.eml error.eml layout.eml view_change.eml
+emls = views/header_table.eml views/article.eml views/index.eml views/history.eml views/full_history.eml views/view_full_change.eml views/error.eml views/layout.eml views/view_change.eml
 views = $(emls:.eml=.ml)
 revised_files = simplexmlparser.ml init.ml gikia.ml
 original_files = utils.ml xmllexer.ml routes.ml views.ml highlight.ml io.ml parsercomb.ml vcs.ml $(views) markup.ml atom.ml
 ocamllex_files = xmllexer.mll
-all_files = utils.ml xmllexer.ml simplexmlparser.ml io.ml highlight.ml markup.ml init.ml parsercomb.ml vcs.ml layout.ml routes.ml views.ml header_table.ml article.ml index.ml history.ml full_history.ml view_full_change.ml error.ml view_change.ml atom.ml gikia.ml
+all_files = utils.ml xmllexer.ml simplexmlparser.ml io.ml highlight.ml markup.ml init.ml parsercomb.ml vcs.ml views/layout.ml routes.ml views.ml views/header_table.ml views/article.ml views/index.ml views/history.ml views/full_history.ml views/view_full_change.ml views/error.ml views/view_change.ml atom.ml gikia.ml
 
 NAME = gikia
-CAMLC   = ocamlfind ocamlc   -thread $(LIB)
-CAMLOPT = ocamlfind ocamlopt -thread $(LIB)
-CAMLDEP = ocamlfind ocamldep
+CAMLC   = ocamlfind ocamlc   -I views/ -thread $(LIB)
+CAMLOPT = ocamlfind ocamlopt -I views/ -thread $(LIB)
+CAMLDEP = ocamlfind ocamldep -I views/
 LIB = -package $(PACKAGES)
 PP = -pp camlp4r
 
@@ -60,6 +60,7 @@ $(revised_optobjs): %.cmx: %.ml
 
 clean:
 	-rm -f *.cm[ioxa] *.cmx[as] *.o *.a *~
+	-rm -f views/*.cm[ioxa] views/*.cmx[as] views/*.o views/*.a *~
 	-rm -f .depend
 	-rm -rf doc
 	-rm -f $(views)
