@@ -58,27 +58,42 @@ let magic_cookie =
   let flags = [ Magic.Mime; Magic.Symlink ] in
   Magic.make ~flags []
 
+let magic_file path =
+  let f path =
+    Magic.file magic_cookie path in
+  Lwt_preemptive.detach f path
+
 type kind_of_file = Page | Other | Html | Dir | NotExists | Incorrect | VcsFile
 (* Returns a type of the file *)
 let kind_of_file path params =
-  if not (Sys.file_exists path) then NotExists else
-  if Sys.is_directory path then Dir else
   let name = try List.last params with List.Empty_list -> "" in
-  try
-    let filetype = lazy (Magic.file magic_cookie path) in
-    match name, params with
-    |     "..",          _        -> Incorrect
-    |     ".",           _        -> Incorrect
-    |      _,         "_darcs"::_ -> VcsFile
-    |      _,         ".git"::_   -> VcsFile
-    |      _,      ["robots.txt"] -> Other
-    | "style.css",       _        -> Other
-    | _ when String.ends_with name ".html"  -> Html
-    | _ when String.starts_with (Lazy.force filetype) "text" -> Page
-    | _ when String.starts_with (Lazy.force filetype) "application/octet-stream" -> Page
-    | _ -> Other
-  with Magic.Failure _ -> Other
+  match name with
+  | ".." | "." -> return Incorrect
+  | _ -> (
+      match params with
+      | "_darcs"::_ -> return VcsFile
+      | ".git"  ::_ -> return VcsFile
+      | ["robots.txt"] -> return Other
+      | ["style.txt"]  -> return Other
+      | _ ->
+          catch (fun () ->
+            print_endline path;
+            Lwt_unix.lstat path >>= fun stats ->
+            let st_kind = stats.Unix.st_kind in
+            match st_kind with
+            | Unix.S_DIR -> return Dir
+            | Unix.S_REG -> (
+                if String.ends_with name ".html"
+                then return Html
+                else
+                  catch (fun () ->
+                    magic_file path >>= fun filetype ->
+                    print_endline filetype;
+                    if   String.starts_with filetype "text"
+                      || String.starts_with filetype "application/octet-stream"
+                    then return Page
+                    else return Other)
+                  (function Magic.Failure _ -> return Other | e -> fail e))
+            | _ -> return Incorrect)
+          (function Unix.Unix_error _ -> return NotExists | e -> fail e))
 
-let kind_of_file path params =
-  let f params = kind_of_file path params in
-  Lwt_preemptive.detach f params
