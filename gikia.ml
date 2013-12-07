@@ -27,8 +27,6 @@ open Init;
   ; p: string list
 };*)
 
-value mainfeed_title hostname = sprintf "Recent changes to %s" hostname;
-
 open Views;
 open Routes;
 
@@ -310,7 +308,7 @@ value send_source _p =
 value send_full_atom hostname =
   let make_iri hash = absolutify hostname & url_to_full_change hash in
   let link = absolutify hostname & url_to_history [] in
-  let title = mainfeed_title hostname in
+  let title = sprintf "Recent changes to %s" hostname in
   Atom.of_repo ~title ~link make_iri prefix >>= fun atom ->
   return & send_ok_with ~content_type:"application/atom+xml" atom;
 

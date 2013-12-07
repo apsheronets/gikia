@@ -32,8 +32,8 @@ value () =
     catch
       (fun () -> f () >>= fun
         [ True  -> return ()
-        | False -> return (print_endline m)]) (* FIXME *)
-      (fun _ -> return (print_endline m)) in (* FIXME *)
+        | False -> Lwt_io.eprintf "%s\n" m]) (* FIXME *)
+      (fun _ -> Lwt_io.eprintf "%s\n" m) in (* FIXME *)
 
   ((*check (fun () ->
       run "polebrush -help" >>= fun line ->
@@ -42,22 +42,22 @@ value () =
   check (fun () ->
       run "source-highlight --version" >>= fun line ->
       Scanf.sscanf line "GNU Source-highlight" (return True))
-    "you need source-highlight" >>= fun () ->
+    "source-highlight is missing! You need to install source-highlight (https://www.gnu.org/software/src-highlite/source-highlight.html) if you want code highlighting in polebrush" >>= fun () ->
   check (fun () ->
       run "wdiff -v" >>= fun line ->
       let f x y _ = return (x > 0 || y >= 6) in
       Scanf.sscanf line "wdiff (GNU wdiff) %d.%d.%d" f)
-    "you need wdiff >= 0.6.0" >>= fun () ->
+    "wdiff is missing! You need to install wdiff >= 0.6.0 to render beautifull diffs" >>= fun () ->
   check (fun () ->
       run "darcs --version" >>= fun line ->
       let f x y _ = return (x >= 2 && y >= 4) in
       Scanf.sscanf line "%d.%d.%d" f)
-    "you need darcs >= 2.4.0" >>= fun () ->
+    "darcs is missing! You need to install darcs >= 2.4.0 if you want to use darcs repos" >>= fun () ->
   check (fun () ->
       run "git --version" >>= fun line ->
       let f x y _ = return (x >= 1) in
       Scanf.sscanf line "git version %d.%d.%d" f)
-    "you need git >= 1.0.0")
+    "git is missing! You need to install git >= 1.0.0 if you want to use git")
 
   >> Lwt_main.run;
 
@@ -73,9 +73,9 @@ value () =
   let help =
     "gikia - a simple wiki engine\n" in
   let l = [
-    ("-p", Set_int port, "INT\tport to listening; default is 8080");
+    ("-p", Set_int port, "INT\t\tport to listening; default is 8080");
     ("-default-host", Set_string default_host, "STR\tdefault hostname; useful for production environment");
-    ("-markup", Set_string markup, "STR\tset markup language: polebrush (default), textile or pure html");
+    ("-markup", Set_string markup, "STR\t\tset markup language: polebrush (default), textile or pure html");
     ("-escape-html", Bool (fun b -> escape_html.val := b), "BOOL\tescape html among markup; default is true; does nothing with -markup html");
   ] in
   Arg.parse l (fun x -> prefix.val := x) help;
@@ -83,7 +83,7 @@ value () =
 value prefix =
   match prefix.val with
   [ "" ->
-      begin eprintf "you need to specify a path to wiki\n"; exit 1 end
+      begin eprintf "You need to specify a path to wiki\n"; exit 1 end
   | s -> s ];
 
 value markup =

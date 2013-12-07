@@ -81,7 +81,6 @@ let kind_of_file path params =
       | ["style.txt"]  -> return Other
       | _ ->
           catch (fun () ->
-            print_endline path;
             Lwt_unix.lstat path >>= fun stats ->
             let st_kind = stats.Unix.st_kind in
             match st_kind with
@@ -92,7 +91,6 @@ let kind_of_file path params =
                 else
                   catch (fun () ->
                     magic_file path >>= fun filetype ->
-                    print_endline filetype;
                     if   String.starts_with filetype "text"
                       || String.starts_with filetype "application/octet-stream"
                     then return Page
