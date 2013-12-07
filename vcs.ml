@@ -402,8 +402,9 @@ let xhtml_of_full_wdiff s =
       p_str_until p_ws >>= fun path1 ->
       p_wss >>>
       p_str_until p_ws >>= fun path2 ->
-      p_str "{---" >>> p_str_until p_eol >>>
-      p_str "{+++" >>> p_str_until p_eol >>>
+      p_str_until ( (* git's: index 3448a15..6e3e873 100644 *)
+        p_str "{---" >>> p_str_until p_eol >>>
+        p_str "{+++" >>> p_str_until p_eol) >>>
       return path2 in
     let diffs =
       let end_of_diff =
