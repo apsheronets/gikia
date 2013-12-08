@@ -369,12 +369,52 @@ value send_source request =
           return & redirect_to (url_to_src dst) ]
   | _ -> return send_404 ];
 
-value send_full_atom hostname =
-  let make_iri hash = absolutify hostname & url_to_full_change hash in
-  let link = absolutify hostname & url_to_history [] in
-  let title = sprintf "Recent changes to %s" hostname in
-  Atom.of_repo ~title ~link make_iri prefix >>= fun atom ->
-  return & send_ok_with ~content_type:"application/atom+xml" atom;
+open Cache;
+open CalendarLib;
+
+value send_chunk ?content_type request chunk =
+  let send_body last_modified =
+    let rs_all =
+      match content_type with
+      [ None -> [("Content-Type", "text/html")]
+      | Some s -> [("Content-Type", s)] ] in
+    let rs_all =
+      [last_modified::rs_all] in
+    !!(chunk.body) >|= fun body ->
+    { rs_status_code = 200
+    ; rs_reason_phrase = "OK"
+    ; rs_headers = { rs_all = rs_all }
+    ; rs_body = Body_string body
+    } in
+  match chunk.mtime with
+  [ AlwaysFresh -> send_body & just_modified_header ()
+  | Mtime mtime ->
+      (catch (fun () ->
+        let last_modified =
+          Calendar.from_unixfloat mtime
+          >> Calendar.to_gmt in
+        let (if_modified_since, _) =
+          List.assoc "If-Modified-Since" request.headers
+          >> calendar_of_rfc2282 in
+        if Calendar.compare last_modified if_modified_since > 0
+        then send_body & http_header_of_mtime mtime
+        else
+          return & send_not_modified & http_header_of_mtime mtime))
+      (fun _ -> send_body & http_header_of_mtime mtime) (* TODO: log it *)
+  ];
+
+value send_full_atom request =
+  let file = new file [] in
+  file#mtime >>= fun mtime ->
+  let body = lazy (
+    let make_iri hash = absolutify request.hostname & url_to_full_change hash in
+    let link = absolutify request.hostname & url_to_history [] in
+    let title = sprintf "Recent changes to %s" request.hostname in
+    Atom.of_repo ~title ~link make_iri prefix
+  ) in
+    send_chunk ~content_type:"application/atom+xml" request
+      { mtime = Mtime mtime;
+        body = body };
 
 value send_atom hostname _p =
   let make_iri hash = absolutify hostname & url_to_full_change hash in
@@ -430,7 +470,7 @@ value my_func segpath rq =
     | (segpath, [("show", "log")]) ->
         render_history hostname segpath >>= fun body ->
         Lwt.return & send_ok_with body
-    | ([],      [("show", "atom")]) -> send_full_atom hostname
+    | ([],      [("show", "atom")]) -> send_full_atom request
     | (segpath, [("show", "atom")]) -> send_atom hostname segpath
     | (segpath, [("show", "source")]) -> send_source request
     | ([],      [("hash", hash)]) ->

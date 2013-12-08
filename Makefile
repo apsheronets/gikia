@@ -2,7 +2,7 @@ PACKAGES = amall,lwt,lwt.extra,extlib,calendar,polebrush,polebrush.html,textile,
 emls = $(wildcard views/*.eml)
 views = $(emls:.eml=.ml)
 revised_files = simplexmlparser.ml init.ml gikia.ml
-original_files = $(views) utils.ml xmllexer.ml routes.ml views.ml highlight.ml io.ml parsercomb.ml vcs.ml markup.ml atom.ml
+original_files = $(views) utils.ml xmllexer.ml routes.ml views.ml highlight.ml io.ml parsercomb.ml vcs.ml markup.ml atom.ml cache.ml
 ocamllex_files = xmllexer.mll
 all_files = $(views) $(revised_files) $(original_files)
 
