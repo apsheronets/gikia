@@ -330,11 +330,14 @@ module S = Amall_http_service.Service(IO)(I);
 
 value (my_listener, http_root, _ws_root) = S.listener_create (`Inet_any port.val);
 
+(* v v v amall kludges v v v *)
+(* gds wont' fix that *)
 value my_endpoint =
   ( http_root
   , `Fallback []
   )
 ;
+(* ^ ^ ^ amall kludges ^ ^ ^ *)
 
 value my_func segpath rq =
   let (hostname, segpath) =
