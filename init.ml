@@ -19,6 +19,9 @@ open Printf;
 open Lwt;
 open Utils;
 
+value () =
+  Lwt_preemptive.init 0 32 (fun s -> Printf.printf "Lwt threads log: %s\n%!" s);
+
 value run cmd =
   Lwt_unix.with_timeout 5.0 (fun () ->
     Lwt_process.shell cmd >>

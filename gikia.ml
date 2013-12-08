@@ -355,7 +355,6 @@ value my_func segpath rq =
     match rq.rq_uri.Uri_type.query with
     [ None -> []
     | Some s -> Uri.parse_params s ] in
-  I.lift &
   catch (fun () ->
     match (segpath, params) with
     [ ([],      [("show", "log")]) ->
@@ -377,6 +376,11 @@ value my_func segpath rq =
     | _ -> Lwt.return send_404 ] )
   (fun e -> Lwt.return send_500)
 ;
+
+value my_func segpath rq =
+  I.lift &
+    Lwt_unix.with_timeout 50. (fun () ->
+      my_func segpath rq);
 
 value () = S.mount_http my_endpoint my_func;
 
