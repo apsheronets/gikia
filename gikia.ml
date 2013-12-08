@@ -245,7 +245,7 @@ value send_ok_with ?content_type body =
   let rs_all = [] in
   let rs_all =
     match content_type with
-    [ None -> rs_all
+    [ None -> [("Content-Type", "text/html")::rs_all]
     | Some s -> [("Content-Type", s)::rs_all] ] in
   { rs_status_code = 200
   ; rs_reason_phrase = "OK"
