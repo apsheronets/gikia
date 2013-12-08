@@ -22,13 +22,6 @@ open ExtLib;
 open Utils;
 open Init;
 
-(*type file = {
-  segpath: string list;
-  path: string;
-  absolute_path: string;
-  mtime: float;
-};*)
-
 class file ?(prefix=prefix) segpath =
   let path = lazy (params_to_string segpath) in
   let absolute_path = lazy (prefix ^/ !!path) in
