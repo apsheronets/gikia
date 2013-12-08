@@ -22,28 +22,66 @@ open ExtLib;
 open Utils;
 open Init;
 
-(*type request =
-  { hostname: string
-  ; p: string list
+(*type file = {
+  segpath: string list;
+  path: string;
+  absolute_path: string;
+  mtime: float;
 };*)
+
+class file ?(prefix=prefix) segpath =
+  let path = lazy (params_to_string segpath) in
+  let absolute_path = lazy (prefix ^/ !!path) in
+  let exists =
+    lazy (Io.file_exists (!!absolute_path)) in
+  let lstat = lazy (
+    Lwt_unix.lstat (!!absolute_path)) in
+  let kind_of_file =
+    lazy (
+      let st_kind = lazy (
+        !!lstat >>= fun lstat ->
+        return lstat.Unix.st_kind) in
+      Io.kind_of_file
+        segpath st_kind absolute_path) in
+  let size =
+    lazy (
+      !!lstat >>= fun lstat ->
+      return & Int64.of_int & lstat.Unix.st_size) in
+
+  object (self)
+    method segpath = segpath;
+    method path = !!path;
+    method absolute_path = !!absolute_path;
+    method exists = !!exists;
+    method lstat = !!lstat;
+    method st_kind = self#lstat >|= fun s -> s.Unix.st_kind;
+    method mtime = self#lstat >|= fun s -> s.Unix.st_mtime;
+    method kind_of_file = !!kind_of_file;
+    method size = !!size;
+    method last_modified_header =
+      self#mtime >|= fun mtime ->
+      let c = CalendarLib.Calendar.from_unixfloat mtime in
+      let rfc822 = Utils.rfc822_of_calendar c in
+      ("Last-Modified", rfc822);
+  end;
 
 open Views;
 open Routes;
 
 (* Makes an article *)
-value render_article hostname _a _p =
-  Markup.get_page _a >>= fun (title, content) ->
+value render_article hostname file =
+  Markup.get_page file#absolute_path >>= fun (title, content) ->
   let title =
     match title with
     [ Some title -> title
-    | None -> params_to_string _p ] in
-  let links = link_to_atom _p in
+    | None -> file#path ] in
+  let links = link_to_atom file#segpath in
   let a =
     object
       method title = title;
       method content = content;
       method links = links;
-      method _p = _p;
+      method file = file;
       method hostname = hostname;
     end in
   render_with_layout Article.f a;
@@ -60,20 +98,21 @@ value render_full_history hostname =
     end in
   render_with_layout Full_history.f a;
 
-value render_history hostname _p =
-  let _a =
-    match _p with
+value render_history hostname segpath =
+  let file = new file segpath in
+  let path =
+    match file#segpath with
     [ [] -> None
-    | _p -> Some (get_path prefix _p) ] in
-  let title = sprintf "History of %s" (params_to_string _p) in
-  Vcs.get_changes prefix ?path:_a >>= fun changes ->
-  let links = link_to_atom _p in
+    | _ -> Some file#absolute_path ] in
+  let title = sprintf "History of %s" file#path in
+  Vcs.get_changes prefix ?path >>= fun changes ->
+  let links = link_to_atom file#segpath in
   let a =
     object
       method title = title;
       method changes = changes;
       method links = links;
-      method _p = _p;
+      method file = file;
       method hostname = hostname;
     end in
   render_with_layout History.f a;
@@ -92,25 +131,25 @@ value render_full_change hostname hash =
     end in
   render_with_layout View_full_change.f a;
 
-value render_change hostname _p hash =
-  let _a = get_path prefix _p in
+value render_change hostname segpath hash =
+  let file = new file segpath in
   let title = sprintf "Patch %s" hash in
-  Vcs.get_diff prefix _a hash >>= fun diff ->
+  Vcs.get_diff prefix file#absolute_path hash >>= fun diff ->
   Vcs.wdiff diff >>= fun wdiff ->
   let wdiff = Vcs.xhtml_of_wdiff wdiff in
   let a =
     object
-      method links = link_to_atom _p;
+      method links = link_to_atom file#segpath;
       method wdiff = wdiff;
       method title = title;
       method hostname = hostname;
       method hash = hash;
-      method _p = _p;
+      method file = file;
     end in
   render_with_layout View_change.f a;
 
 (* Makes a page with a list of directory content *)
-value render_index hostname prefix _p =
+value render_index hostname prefix dir =
   (* Returns True if file is invisible *)
   let invisible filename =
     if filename = "style.css" or filename = "_darcs"
@@ -118,7 +157,7 @@ value render_index hostname prefix _p =
     else if filename.[0] = '.'
       then True
       else False in
-  (Lwt_unix.opendir (get_path prefix _p) >>= fun dh ->
+  (Lwt_unix.opendir dir#absolute_path >>= fun dh ->
     let rec loop acc =
       catch
         (fun () ->
@@ -134,16 +173,16 @@ value render_index hostname prefix _p =
   List.filter (fun x -> not (invisible x)) >>
   Lwt_list.map_p
     (fun x ->
-      let path = get_path prefix (_p @ [x]) in
-      Io.kind_of_file path (_p @ [x]) >>= (fun
+      let file = new file (dir#segpath @ [x]) in
+      file#kind_of_file >>= (fun
       [ Io.Page ->
-          Markup.get_header_of_page path >>= fun
+          Markup.get_header_of_page file#absolute_path >>= fun
           [ Some s -> return (False, s)
           | None   -> return (False, x) ]
       | Io.Dir -> return (True, (x ^ "/"))
       | _ -> return (False, x) ] ) >>= fun (is_a_dir, title) ->
              (* FIXME: hey, we need dtfilter here! *)
-      return (is_a_dir, (params_to_string (_p @ [x])), title)
+      return (is_a_dir, file#path, title)
       ) ) >>= fun lis ->
   let cmp x y =
     match (x, y) with
@@ -151,16 +190,15 @@ value render_index hostname prefix _p =
     | (True, False) -> -1
     | _ -> 0 ] in
   let lis = List.sort ~cmp:(fun (x,_,_) (y,_,_) -> cmp x y) lis in
-  let dirname =
-    params_to_string _p in
+  let dirname = dir#path in
   let title = "Index of " ^ dirname in
   let a =
     object
-      method links = link_to_atom _p;
+      method links = link_to_atom dir#segpath;
       method lis = lis;
       method title = title;
       method hostname = hostname;
-      method _p = _p;
+      method file = dir;
     end in
   render_with_layout Index.f a;
 
@@ -219,17 +257,19 @@ value send_500 =
   ; rs_body = Body_string render_500
   };
 
-value send_file ?content_type path_to_file =
+value send_file ?content_type file =
   let rs_all = [] in
   let rs_all =
     match content_type with
     [ None -> rs_all
     | Some s -> [("Content-Type", s)::rs_all] ] in
-  let size = Int64.of_int & (Unix.stat path_to_file).Unix.st_size in
+  file#last_modified_header >>= fun last_modified ->
+  let rs_all = [last_modified::rs_all] in
+  file#size >|= fun size ->
   { rs_status_code = 200
   ; rs_reason_phrase = "OK"
   ; rs_headers = { rs_all = rs_all }
-  ; rs_body = File_contents path_to_file size
+  ; rs_body = File_contents file#absolute_path size
   };
 
 value redirect_to path =
@@ -254,32 +294,31 @@ value send_ok_with ?content_type body =
   };
 
 value main_handler hostname _p =
-  let _a = get_path prefix _p in
-  Io.kind_of_file _a _p >>= fun
+  let file = new file _p in
+  file#kind_of_file >>= fun
   [ Io.Page when (try List.last _p = "index" with _ -> False) ->
       (* do not handle /path/index *)
       return & redirect_to & params_to_string &
         List.rev & List.drop 1 & List.rev _p
   | Io.Page ->
-      render_article hostname _a _p >>= fun body ->
+      render_article hostname file >>= fun body ->
       Lwt.return & send_ok_with body
   | Io.Other | Io.Html | Io.VcsFile ->
-      return & send_file _a
+      send_file file
   | Io.Dir ->
-      let index_a = _a ^/ "index" in
-      let index_p = _p @ ["index"] in
-      Io.kind_of_file index_a index_p >>= fun
+      let index = new file (file#segpath @ ["index"]) in
+      index#kind_of_file >>= fun
       [ Io.Page ->
-          render_article hostname index_a index_p >>= fun body ->
+          render_article hostname index >>= fun body ->
           return & send_ok_with body
       | _ ->
-          render_index hostname prefix _p >>= fun body ->
+          render_index hostname prefix file >>= fun body ->
           return & send_ok_with body ]
   | Io.NotExists ->
-      let path = gikia_public_dir ^/ params_to_string _p in
-      Io.file_exists path >>= fun file_exists ->
+      let file_in_public = new file ~prefix:gikia_public_dir _p in
+      file_in_public#exists >>= fun file_exists ->
       if file_exists
-      then return & send_file path
+      then send_file file_in_public
       else
         (*match _p with
         [ ["sitemap.xml"] ->
@@ -288,7 +327,7 @@ value main_handler hostname _p =
               Sitemap.make main_service prefix >>= fun body ->
               send_ok_with ~content_type:"application/xml" body
         | _ ->*)
-            Vcs.where_file_leaves prefix _a _p >>= fun
+            Vcs.where_file_leaves prefix file#absolute_path file#segpath >>= fun
             [ None -> return send_404
             | Some Vcs.Removed -> return (send_410 _p)
             | Some (Vcs.MovedTo dst) ->
@@ -296,12 +335,12 @@ value main_handler hostname _p =
   | Io.Incorrect -> return send_404 ];
 
 value send_source _p =
-  let _a = get_path prefix _p in
-  Io.kind_of_file _a _p >>= fun
+  let file = new file _p in
+  file#kind_of_file >>= fun
   [ Io.Page ->
-      return & send_file ~content_type:"text/plain" _a
+      send_file ~content_type:"text/plain" file
   | Io.NotExists ->
-      Vcs.where_file_leaves prefix _a _p >>= fun
+      Vcs.where_file_leaves prefix file#absolute_path file#segpath >>= fun
       [ None -> return send_404
       | Some Vcs.Removed -> return (send_410 _p)
       | Some (Vcs.MovedTo dst) ->
@@ -377,7 +416,9 @@ value my_func segpath rq =
         Lwt.return & send_ok_with body
     | (segpath, []) -> main_handler hostname segpath
     | _ -> Lwt.return send_404 ] )
-  (fun e -> Lwt.return send_500)
+  (fun e ->
+    Lwt_io.eprintl (Printexc.to_string e) >>= fun () ->
+    Lwt.return send_500)
 ;
 
 value my_func segpath rq =

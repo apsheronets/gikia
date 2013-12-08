@@ -18,7 +18,7 @@
         | Calendar d -> rfc3339_of_calendar d %>
       </td>
       <td>
-        <a href="<%= url_to_change a#_p p.Vcs.hash %>"><%= p.Vcs.title %></a>
+        <a href="<%= url_to_change a#file#segpath p.Vcs.hash %>"><%= p.Vcs.title %></a>
         <% p.comment >> List.iter begin fun s -> %>
           <br /><%= s %>
         <% end; %>

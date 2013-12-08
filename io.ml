@@ -69,20 +69,19 @@ let magic_file path =
 
 type kind_of_file = Page | Other | Html | Dir | NotExists | Incorrect | VcsFile
 (* Returns a type of the file *)
-let kind_of_file path params =
-  let name = try List.last params with List.Empty_list -> "" in
+let kind_of_file segpath st_kind absolute_path =
+  let name = try List.last segpath with List.Empty_list -> "" in
   match name with
   | ".." | "." -> return Incorrect
   | _ -> (
-      match params with
+      match segpath with
       | "_darcs"::_ -> return VcsFile
       | ".git"  ::_ -> return VcsFile
       | ["robots.txt"] -> return Other
       | ["style.txt"]  -> return Other
       | _ ->
           catch (fun () ->
-            Lwt_unix.lstat path >>= fun stats ->
-            let st_kind = stats.Unix.st_kind in
+            Lazy.force st_kind >>= fun st_kind ->
             match st_kind with
             | Unix.S_DIR -> return Dir
             | Unix.S_REG -> (
@@ -90,7 +89,7 @@ let kind_of_file path params =
                 then return Html
                 else
                   catch (fun () ->
-                    magic_file path >>= fun filetype ->
+                    magic_file (Lazy.force absolute_path) >>= fun filetype ->
                     if   String.starts_with filetype "text"
                       || String.starts_with filetype "application/octet-stream"
                     then return Page

@@ -1,7 +1,7 @@
 % let f a buf =
 <table class="header">
   <tr>
-    <td class="breadcrumbs"><%=raw Views.render_breadcrumbs a#_p %></td>
-    <td class="links"><%=raw Views.render_editlinks a#_p %></td>
+    <td class="breadcrumbs"><%=raw Views.render_breadcrumbs a#file#segpath %></td>
+    <td class="links"><%=raw Views.render_editlinks a#file#segpath %></td>
   </tr>
 </table>

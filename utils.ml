@@ -21,6 +21,7 @@ open ExtLib
 
 let (>>) f g = g f
 let (^/) = Filename.concat
+let (!!) = Lazy.force
 let hdtl l = (List.hd l, List.tl l)
 
 (* Directory traversal filter *)
