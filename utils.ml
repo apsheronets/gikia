@@ -108,12 +108,65 @@ let rfc3339_of_calendar c =
 let rfc822_of_calendar c =
   CalendarLib.Printer.Calendar.sprint "%a, %d %b %Y %T %z" c
 
-
 (*(* haven't read http://tools.ietf.org/html/rfc2822#section-3.3
  * who cares *)
 let rfc2282_of_calendar =
   CalendarLib.Printer.Calendar.sprint
     "%a, %d %b %Y %H:%M:%S %z"*)
+
+(* "Sun, 08 Dec 2013 22:27:45 +0400" *)
+let calendar_of_rfc2282 s =
+  let module C = CalendarLib.Calendar in
+  String.nsplit s " "
+  >> List.filter (function "" -> false | _ -> true) >>
+  function
+  | [day_of_week; day; month; year; time; timezone] ->
+      let day = int_of_string day in
+      let month =
+        String.slice ~first:0 ~last:3 month
+        >> (function
+          | "Jan" -> C.Jan
+          | "Feb" -> C.Feb
+          | "Mar" -> C.Mar
+          | "Apr" -> C.Apr
+          | "May" -> C.May
+          | "Jun" -> C.Jun
+          | "Jul" -> C.Jul
+          | "Aug" -> C.Aug
+          | "Sep" -> C.Sep
+          | "Oct" -> C.Oct
+          | "Nov" -> C.Nov
+          | "Dec" -> C.Dec
+          | _ -> failwith "calendar_of_rfc2282") >>
+        C.Date.int_of_month in
+      let year = int_of_string year in
+      let hours, minutes, seconds =
+        match String.nsplit time ":" with
+        | [hours; minutes; seconds] ->
+            int_of_string hours,
+            int_of_string minutes,
+            int_of_string seconds
+        | _ -> failwith "calendar_of_rfc2282" in
+      let timezone =
+        match timezone with
+        | "GMT" -> CalendarLib.Time_Zone.UTC
+        | _ ->
+            let mult =
+              match timezone.[0] with
+              | '+' -> 1
+              | '-' -> -1
+              | _ -> failwith "calendar_of_rfc2282" in
+            let hours =
+              String.slice ~first:1 ~last:3 timezone >>
+              int_of_string in
+            CalendarLib.Time_Zone.UTC_Plus (hours * mult) in
+      let c =
+        CalendarLib.Time_Zone.on
+          (fun () -> C.make year month day hours minutes seconds)
+          timezone
+          () in
+      (c, timezone)
+  | _ -> failwith "calendar_of_rfc2282"
 
 (* html escaping *)
 let esc s =

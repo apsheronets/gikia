@@ -58,6 +58,12 @@ class file ?(prefix=prefix) segpath =
       ("Last-Modified", rfc822);
   end;
 
+type request = {
+  hostname: string;
+  segpath: list string;
+  headers: list (string * string);
+};
+
 open Views;
 open Routes;
 
@@ -265,6 +271,29 @@ value send_file ?content_type file =
   ; rs_body = File_contents file#absolute_path size
   };
 
+value send_not_modified last_modified =
+ { rs_status_code = 304
+ ; rs_reason_phrase = "Not Modified"
+ ; rs_headers = { rs_all = [last_modified] }
+ ; rs_body = No_body };
+
+value send_file ?content_type request file =
+  catch (fun () ->
+    file#mtime >>= fun mtime ->
+    let last_modified =
+      CalendarLib.Calendar.from_unixfloat mtime
+      >> CalendarLib.Calendar.to_gmt in
+    let (if_modified_since, _) =
+      List.assoc "If-Modified-Since" request.headers
+      >> calendar_of_rfc2282 in
+    if CalendarLib.Calendar.compare last_modified if_modified_since > 0
+    then send_file ?content_type file
+    else
+      file#last_modified_header >|=
+      send_not_modified)
+  (fun _ -> send_file ?content_type file); (* TODO: log it *)
+
+
 value redirect_to path =
   let location_header = ("Location", path) in
   { rs_status_code = 301
@@ -286,32 +315,32 @@ value send_ok_with ?content_type body =
   ; rs_body = Body_string body
   };
 
-value main_handler hostname _p =
-  let file = new file _p in
+value main_handler request =
+  let file = new file request.segpath in
   file#kind_of_file >>= fun
-  [ Io.Page when (try List.last _p = "index" with _ -> False) ->
+  [ Io.Page when (try List.last file#segpath = "index" with _ -> False) ->
       (* do not handle /path/index *)
       return & redirect_to & params_to_string &
-        List.rev & List.drop 1 & List.rev _p
+        List.rev & List.drop 1 & List.rev file#segpath
   | Io.Page ->
-      render_article hostname file >>= fun body ->
+      render_article request.hostname file >>= fun body ->
       Lwt.return & send_ok_with body
   | Io.Other | Io.Html | Io.VcsFile ->
-      send_file file
+      send_file request file
   | Io.Dir ->
       let index = new file (file#segpath @ ["index"]) in
       index#kind_of_file >>= fun
       [ Io.Page ->
-          render_article hostname index >>= fun body ->
+          render_article request.hostname index >>= fun body ->
           return & send_ok_with body
       | _ ->
-          render_index hostname prefix file >>= fun body ->
+          render_index request.hostname prefix file >>= fun body ->
           return & send_ok_with body ]
   | Io.NotExists ->
-      let file_in_public = new file ~prefix:gikia_public_dir _p in
+      let file_in_public = new file ~prefix:gikia_public_dir request.segpath in
       file_in_public#exists >>= fun file_exists ->
       if file_exists
-      then send_file file_in_public
+      then send_file request file_in_public
       else
         (*match _p with
         [ ["sitemap.xml"] ->
@@ -322,20 +351,20 @@ value main_handler hostname _p =
         | _ ->*)
             Vcs.where_file_leaves prefix file#absolute_path file#segpath >>= fun
             [ None -> return send_404
-            | Some Vcs.Removed -> return (send_410 _p)
+            | Some Vcs.Removed -> return (send_410 request.segpath)
             | Some (Vcs.MovedTo dst) ->
                 return & redirect_to (params_to_string dst) ] (* ] *)
   | Io.Incorrect -> return send_404 ];
 
-value send_source _p =
-  let file = new file _p in
+value send_source request =
+  let file = new file request.segpath in
   file#kind_of_file >>= fun
   [ Io.Page ->
-      send_file ~content_type:"text/plain" file
+      send_file ~content_type:"text/plain" request file
   | Io.NotExists ->
       Vcs.where_file_leaves prefix file#absolute_path file#segpath >>= fun
       [ None -> return send_404
-      | Some Vcs.Removed -> return (send_410 _p)
+      | Some Vcs.Removed -> return (send_410 request.segpath)
       | Some (Vcs.MovedTo dst) ->
           return & redirect_to (url_to_src dst) ]
   | _ -> return send_404 ];
@@ -372,6 +401,8 @@ value my_endpoint =
 (* ^ ^ ^ amall kludges ^ ^ ^ *)
 
 value my_func segpath rq =
+  let headers =
+    rq.rq_headers.rq_all in
   let (hostname, segpath) =
     match segpath with
     [ [_; hostname :: t] -> (hostname, t)
@@ -390,6 +421,7 @@ value my_func segpath rq =
     match rq.rq_uri.Uri_type.query with
     [ None -> []
     | Some s -> Uri.parse_params s ] in
+  let request = { hostname=hostname; segpath=segpath; headers=headers } in
   catch (fun () ->
     match (segpath, params) with
     [ ([],      [("show", "log")]) ->
@@ -400,14 +432,14 @@ value my_func segpath rq =
         Lwt.return & send_ok_with body
     | ([],      [("show", "atom")]) -> send_full_atom hostname
     | (segpath, [("show", "atom")]) -> send_atom hostname segpath
-    | (segpath, [("show", "source")]) -> send_source segpath
+    | (segpath, [("show", "source")]) -> send_source request
     | ([],      [("hash", hash)]) ->
         render_full_change hostname hash >>= fun body ->
         Lwt.return & send_ok_with body
     | (segpath, [("hash", hash) :: _]) ->
         render_change hostname segpath hash >>= fun body ->
         Lwt.return & send_ok_with body
-    | (segpath, []) -> main_handler hostname segpath
+    | (segpath, []) -> main_handler request
     | _ -> Lwt.return send_404 ] )
   (fun e ->
     Lwt_io.eprintl (Printexc.to_string e) >>= fun () ->
