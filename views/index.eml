@@ -2,7 +2,12 @@
 % let f a buf =
   <% Header_table.f a buf; %>
   <h1><%= a#title %></h1>
-  <% (match a#lis with
-  | "" -> %>  <h1>Empty</h1><%
-  | lis -> %> <ul><%=raw lis %></ul>
-  <% ); %>
+  <% match a#lis with
+     | [] -> %>
+    <p>This directory is empty.</p>
+  <% | lis -> %>
+    <ul>
+    <% lis >> List.iter (fun (_, path, title) -> %>
+      <li><%=raw link_to path title %></li>
+    <% ); %>
+    </ul>

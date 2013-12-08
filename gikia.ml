@@ -111,7 +111,7 @@ value render_change hostname _p hash =
 
 (* Makes a page with a list of directory content *)
 value render_index hostname prefix _p =
-  (* Returns true if file is invisible *)
+  (* Returns True if file is invisible *)
   let invisible filename =
     if filename = "style.css" or filename = "_darcs"
     then True
@@ -130,24 +130,27 @@ value render_index hostname prefix _p =
           | e -> fail e]) in
     loop [])
   >>= fun files ->
-  (match files with
-  [ [] -> return "" (* FIXME *)
-  | files ->
-      (files >>
-      List.filter (fun x -> not (invisible x)) >>
-      Lwt_list.map_p
-        (fun x ->
-          let path = get_path prefix (_p @ [x]) in
-          Io.kind_of_file path (_p @ [x]) >>= (fun
-          [ Io.Page ->
-              Markup.get_header_of_page path >>= fun
-              [ Some s -> return s
-              | None   -> return x ]
-          | Io.Dir -> return (x ^ "/")
-          | _ -> return x ] ) >>= fun title ->
-          return ("<li>" ^ link_to (params_to_string (_p @ [x])) title ^ "</li>")
-        ) ) >>= fun lis ->
-      return & String.concat "" lis ] ) >>= fun lis ->
+  (files >>
+  List.filter (fun x -> not (invisible x)) >>
+  Lwt_list.map_p
+    (fun x ->
+      let path = get_path prefix (_p @ [x]) in
+      Io.kind_of_file path (_p @ [x]) >>= (fun
+      [ Io.Page ->
+          Markup.get_header_of_page path >>= fun
+          [ Some s -> return (False, s)
+          | None   -> return (False, x) ]
+      | Io.Dir -> return (True, (x ^ "/"))
+      | _ -> return (False, x) ] ) >>= fun (is_a_dir, title) ->
+             (* FIXME: hey, we need dtfilter here! *)
+      return (is_a_dir, (params_to_string (_p @ [x])), title)
+      ) ) >>= fun lis ->
+  let cmp x y =
+    match (x, y) with
+    [ (False, True) -> 1
+    | (True, False) -> -1
+    | _ -> 0 ] in
+  let lis = List.sort ~cmp:(fun (x,_,_) (y,_,_) -> cmp x y) lis in
   let dirname =
     params_to_string _p in
   let title = "Index of " ^ dirname in
