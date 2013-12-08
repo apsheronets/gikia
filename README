@@ -1,0 +1,29 @@
+
+Build dependencies
+------------------
+
+* make
+* ocaml 3.12
+* camlp4
+* libextlib-ocaml-dev
+* liblwt-ocaml-dev
+* libcalendar-ocaml-dev
+* libmagic-ocaml-dev
+* polebrush >= 0.19
+  * http://komar.bitcheese.net/src/polebrush/
+* textile-ocaml
+  * http://komar.bitcheese.net/en/code/textile-ocaml
+* ocamldep-sorter
+  * http://komar.bitcheese.net/en/code/ocamldep-sorter
+* ecaml
+  * http://komar.bitcheese.net/en/code/ecaml
+* amall
+  * https://bitbucket.org/gds/amall
+    * libcryptokit-ocaml-dev
+    * libpostgresql-ocaml-dev
+  * https://bitbucket.org/gds/ocaml-iteratees
+  * https://bitbucket.org/gds/cadastr
+    * libounit-ocaml-dev
+    * libjson-wheel-ocaml-dev
+    * ocaml 3.12 (not 3.11 and not 4.*)
+  * https://bitbucket.org/gds/ocaml_monad_io
