@@ -1,19 +1,14 @@
-% open Lwt
 % open Routes
 % let f a buf =
 <table class="header">
   <tr>
     <td class="breadcrumbs"><%=raw Views.render_breadcrumbs a#file#segpath %></td>
     <td class="links">
-      <% catch (fun () ->
-           a#file#st_kind >|= function
-           | Unix.S_REG -> %>
-               <%=raw link_to_history a#file#segpath %> | <%=raw link_to_src a#file#segpath %>
-      <%   | _ -> %>
-               <%=raw link_to_history a#file#segpath %>
-      <% ) (fun _ -> %>
-               <%=raw link_to_history a#file#segpath %>
-      <% return ()) >|= fun () -> %>
+      <% if a#regular_file then begin %>
+           <%=raw link_to_history a#file#segpath %> | <%=raw link_to_src a#file#segpath %>
+      <% end else begin %>
+           <%=raw link_to_history a#file#segpath %>
+      <% end; %>
     </td>
   </tr>
 </table>

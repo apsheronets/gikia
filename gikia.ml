@@ -82,6 +82,7 @@ value render_article hostname file =
       method links = links;
       method file = file;
       method hostname = hostname;
+      method regular_file = True;
     end in
   render_with_layout Article.f a;
 
@@ -112,6 +113,7 @@ value render_history request file =
       method links = links;
       method file = file;
       method hostname = request.hostname;
+      method regular_file = True; (* FIXME *)
     end in
   render_with_layout History.f a;
 
@@ -143,6 +145,7 @@ value render_change hostname segpath hash =
       method hostname = hostname;
       method hash = hash;
       method file = file;
+      method regular_file = True; (* FIXME *)
     end in
   render_with_layout View_change.f a;
 
@@ -197,6 +200,7 @@ value render_index hostname prefix dir =
       method title = title;
       method hostname = hostname;
       method file = dir;
+      method regular_file = False;
     end in
   render_with_layout Index.f a;
 
