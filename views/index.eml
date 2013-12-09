@@ -1,6 +1,7 @@
+% open Lwt
 % open Utils
 % let f a buf =
-  <% Header_table.f a buf; %>
+  <% Header_table.f a buf >|= fun () -> %>
   <h1><%= a#title %></h1>
   <% match a#lis with
      | [] -> %>

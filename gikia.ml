@@ -97,8 +97,7 @@ value render_full_history hostname =
     end in
   render_with_layout Full_history.f a;
 
-value render_history hostname segpath =
-  let file = new file segpath in
+value render_history request file =
   let path =
     match file#segpath with
     [ [] -> None
@@ -112,7 +111,7 @@ value render_history hostname segpath =
       method changes = changes;
       method links = links;
       method file = file;
-      method hostname = hostname;
+      method hostname = request.hostname;
     end in
   render_with_layout History.f a;
 
@@ -303,20 +302,18 @@ value redirect_to path =
   ; rs_body = Body_string "moved" (* FIXME *)
   };
 
-value send_ok_with ?content_type body =
-  let rs_all = [] in
-  let rs_all =
+value send_ok_with ?(headers=[]) ?content_type body =
+  let headers =
     match content_type with
-    [ None -> [("Content-Type", "text/html")::rs_all]
-    | Some s -> [("Content-Type", s)::rs_all] ] in
+    [ None -> [("Content-Type", "text/html")::headers]
+    | Some s -> [("Content-Type", s)::headers] ] in
   { rs_status_code = 200
   ; rs_reason_phrase = "OK"
-  ; rs_headers = { rs_all = rs_all }
+  ; rs_headers = { rs_all = headers }
   ; rs_body = Body_string body
   };
 
-value main_handler request =
-  let file = new file request.segpath in
+value main_handler file request header =
   file#kind_of_file >>= fun
   [ Io.Page when (try List.last file#segpath = "index" with _ -> False) ->
       (* do not handle /path/index *)
@@ -324,7 +321,7 @@ value main_handler request =
         List.rev & List.drop 1 & List.rev file#segpath
   | Io.Page ->
       render_article request.hostname file >>= fun body ->
-      Lwt.return & send_ok_with body
+      Lwt.return & send_ok_with ~headers:[header] body
   | Io.Other | Io.Html | Io.VcsFile ->
       send_file request file
   | Io.Dir ->
@@ -332,10 +329,10 @@ value main_handler request =
       index#kind_of_file >>= fun
       [ Io.Page ->
           render_article request.hostname index >>= fun body ->
-          return & send_ok_with body
+          return & send_ok_with ~headers:[header] body
       | _ ->
           render_index request.hostname prefix file >>= fun body ->
-          return & send_ok_with body ]
+          return & send_ok_with ~headers:[header] body ]
   | Io.NotExists ->
       let file_in_public = new file ~prefix:gikia_public_dir request.segpath in
       file_in_public#exists >>= fun file_exists ->
@@ -403,6 +400,26 @@ value send_chunk ?content_type request chunk =
       (fun _ -> send_body & http_header_of_mtime mtime) (* TODO: log it *)
   ];
 
+value cache_responce request chunk =
+  let send_responce last_modified =
+    !!(chunk.body) last_modified in
+  match chunk.mtime with
+  [ AlwaysFresh -> send_responce & just_modified_header ()
+  | Mtime mtime ->
+      (catch (fun () ->
+        let last_modified =
+          Calendar.from_unixfloat mtime
+          >> Calendar.to_gmt in
+        let (if_modified_since, _) =
+          List.assoc "If-Modified-Since" request.headers
+          >> calendar_of_rfc2282 in
+        if Calendar.compare last_modified if_modified_since > 0
+        then send_responce & http_header_of_mtime mtime
+        else
+          return & send_not_modified & http_header_of_mtime mtime))
+      (fun _ -> send_responce & http_header_of_mtime mtime) (* TODO: log it *)
+  ];
+
 value send_full_atom request =
   let file = new file [] in
   file#mtime >>= fun mtime ->
@@ -412,17 +429,22 @@ value send_full_atom request =
     let title = sprintf "Recent changes to %s" request.hostname in
     Atom.of_repo ~title ~link make_iri prefix
   ) in
-    send_chunk ~content_type:"application/atom+xml" request
-      { mtime = Mtime mtime;
-        body = body };
+  send_chunk ~content_type:"application/atom+xml" request
+    { mtime = Mtime mtime;
+      body = body };
 
-value send_atom hostname _p =
-  let make_iri hash = absolutify hostname & url_to_full_change hash in
-  let link = absolutify hostname & url_to_history _p in
-  let title = sprintf "Recent changes to %s" (params_to_string _p) in
-  let _a = get_path prefix _p in
-  Atom.of_page ~title ~link make_iri prefix _a >>= fun atom ->
-  return & send_ok_with ~content_type:"application/atom+xml" atom;
+value send_atom request segpath =
+  let file = new file segpath in
+  file#mtime >>= fun mtime ->
+  let body = lazy (
+    let make_iri hash = absolutify request.hostname & url_to_full_change hash in
+    let link = absolutify request.hostname & url_to_history segpath in
+    let title = sprintf "Recent changes to %s" file#path in
+    Atom.of_page ~title ~link make_iri prefix file#absolute_path
+  ) in
+  send_chunk ~content_type:"application/atom+xml" request
+    { mtime = Mtime mtime;
+      body = body };
 
 open Am_All;
 open Amall_types;
@@ -462,24 +484,45 @@ value my_func segpath rq =
     [ None -> []
     | Some s -> Uri.parse_params s ] in
   let request = { hostname=hostname; segpath=segpath; headers=headers } in
+  let file_related_chunk file body =
+    file#exists >>= fun
+    [ True ->
+        file#mtime >>= fun mtime ->
+        send_chunk request { mtime = Mtime mtime; body }
+    | False ->
+        send_chunk request { mtime = AlwaysFresh; body } ] in
   catch (fun () ->
     match (segpath, params) with
     [ ([],      [("show", "log")]) ->
-        render_full_history hostname >>= fun body ->
-        Lwt.return & send_ok_with body
+        let file = new file segpath in
+        file_related_chunk file (lazy (render_full_history hostname))
     | (segpath, [("show", "log")]) ->
-        render_history hostname segpath >>= fun body ->
-        Lwt.return & send_ok_with body
+        let file = new file segpath in
+        file_related_chunk file (lazy (render_history request file))
     | ([],      [("show", "atom")]) -> send_full_atom request
-    | (segpath, [("show", "atom")]) -> send_atom hostname segpath
+    | (segpath, [("show", "atom")]) -> send_atom request segpath
     | (segpath, [("show", "source")]) -> send_source request
     | ([],      [("hash", hash)]) ->
-        render_full_change hostname hash >>= fun body ->
-        Lwt.return & send_ok_with body
+        let file = new file segpath in
+        file_related_chunk file (lazy (render_full_change hostname hash))
     | (segpath, [("hash", hash) :: _]) ->
-        render_change hostname segpath hash >>= fun body ->
-        Lwt.return & send_ok_with body
-    | (segpath, []) -> main_handler request
+        let file = new file segpath in
+        file_related_chunk file (lazy (render_change hostname segpath hash))
+    | (segpath, []) ->
+        let file = new file segpath in
+        file#exists >>= fun exists ->
+          match exists with
+          [ True ->
+              file#mtime >>= fun mtime ->
+              return & Mtime mtime
+          | False ->
+              return & AlwaysFresh ]
+        >>= fun mtime ->
+        let chunk = {
+          mtime = mtime;
+          body = lazy (main_handler file request)
+        } in
+        cache_responce request chunk
     | _ -> Lwt.return send_404 ] )
   (fun e ->
     Lwt_io.eprintl (Printexc.to_string e) >>= fun () ->

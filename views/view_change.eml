@@ -1,7 +1,7 @@
+% open Lwt
 % open Utils
-% let f a buf = (
-  <% Header_table.f a buf; %>
+% let f a buf =
+  <% Header_table.f a buf >|= fun () -> %>
   <h1><%= a#title %></h1>
   <p><%=raw link_to (url_to_full_change a#hash) "See also the wholly patch" %></p>
   <pre class="diff"><%=raw a#wdiff %></pre>
-% )

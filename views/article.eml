@@ -1,5 +1,6 @@
+% open Lwt
 % let f a buf =
-  <% Header_table.f a buf; %>
+  <% Header_table.f a buf >|= fun () -> %>
   <div id="content">
     <%=raw a#content %>
   </div>
