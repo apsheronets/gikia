@@ -427,7 +427,7 @@ value send_full_atom request =
     let make_iri hash = absolutify request.hostname & url_to_full_change hash in
     let link = absolutify request.hostname & url_to_history [] in
     let title = sprintf "Recent changes to %s" request.hostname in
-    Atom.of_repo ~title ~link make_iri prefix
+    Atom.of_repo ~file ~title ~link make_iri
   ) in
   send_chunk ~content_type:"application/atom+xml" request
     { mtime = Mtime mtime;
@@ -440,7 +440,7 @@ value send_atom request segpath =
     let make_iri hash = absolutify request.hostname & url_to_full_change hash in
     let link = absolutify request.hostname & url_to_history segpath in
     let title = sprintf "Recent changes to %s" file#path in
-    Atom.of_page ~title ~link make_iri prefix file#absolute_path
+    Atom.of_page ~file ~title ~link make_iri
   ) in
   send_chunk ~content_type:"application/atom+xml" request
     { mtime = Mtime mtime;

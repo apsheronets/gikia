@@ -19,6 +19,7 @@
 
 open Lwt
 open Utils
+open Init
 open CalendarLib
 
 let entry_of_change make_iri prefix path c =
@@ -42,28 +43,28 @@ let entry_of_change make_iri prefix path c =
     "</entry>"
   )
 
-let of_changes ~title ~link make_iri prefix path changes =
+let of_changes ~file ~title ~link make_iri prefix path changes =
   Lwt_list.map_s (entry_of_change make_iri prefix path) changes >>= fun entries ->
-  let up =
-    let f =
-      try (Unix.stat path).Unix.st_mtime
-      with _ -> 0. in
-    rfc3339_of_calendar (Calendar.from_unixfloat f) in
+  catch
+    (fun () -> file#mtime)
+    (fun _ -> return 0.)
+  >>= fun mtime ->
+  let updated = rfc3339_of_calendar (Calendar.from_unixfloat mtime) in
   return (
     "<feed xmlns=\"http://www.w3.org/2005/Atom\">" ^
       "<title>" ^ esc title ^ "</title>" ^
-      "<updated>" ^ esc up ^ "</updated>" ^
+      "<updated>" ^ esc updated ^ "</updated>" ^
       "<id>" ^ esc link ^ "</id>" ^
       "<link href=\"" ^ esc link ^ "\" />" ^
       String.concat "" entries ^
     "</feed>"
   )
 
-let of_page ~title ~link make_iri prefix path =
-  Vcs.get_changes prefix ~count:20 ~path >>= fun changes ->
-  of_changes ~title ~link make_iri prefix path changes
+let of_page ~file ~title ~link make_iri =
+  Vcs.get_changes prefix ~count:20 ~path:file#absolute_path >>= fun changes ->
+  of_changes ~file ~title ~link make_iri prefix file#absolute_path changes
 
-let of_repo ~title ~link make_iri prefix =
+let of_repo ~file ~title ~link make_iri =
   Vcs.get_changes prefix ~count:20 >>= fun changes ->
-  of_changes ~title ~link make_iri prefix prefix changes
+  of_changes ~file ~title ~link make_iri prefix prefix changes
 
