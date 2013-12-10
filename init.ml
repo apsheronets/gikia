@@ -47,6 +47,10 @@ value () =
       Scanf.sscanf line "GNU Source-highlight" (return True))
     "source-highlight is missing! You need to install source-highlight (https://www.gnu.org/software/src-highlite/source-highlight.html) if you want code highlighting in polebrush" >>= fun () ->
   check (fun () ->
+      run "file --version" >>= fun line ->
+      Scanf.sscanf line "file" (return True))
+    "'file' command is missing! You need to install it. We can't work without it." >>= fun () ->
+  check (fun () ->
       run "wdiff -v" >>= fun line ->
       let f x y _ = return (x > 0 || y >= 6) in
       Scanf.sscanf line "wdiff (GNU wdiff) %d.%d.%d" f)

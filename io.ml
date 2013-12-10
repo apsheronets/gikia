@@ -59,17 +59,11 @@ let file_exists path =
       Lwt_unix.lstat path >>= fun _ -> return true)
     (function _ -> return false)
 
-(* Getting type of a file with magic library *)
-let magic_cookie =
-  let flags = [ Magic.Mime; Magic.Symlink ] in
-  Magic.make ~flags []
-
 let magic_file path =
-  let f path =
-    Magic.file magic_cookie path in
-  Lwt_preemptive.detach f path
+  exec ("file", [|"file"; "--mime"; "-L"; "--brief"; path|])
 
 type kind_of_file = Page | Other | Html | Dir | NotExists | Incorrect | VcsFile
+
 (* Returns a type of the file *)
 let kind_of_file segpath st_kind absolute_path =
   let name = try List.last segpath with List.Empty_list -> "" in
@@ -96,7 +90,7 @@ let kind_of_file segpath st_kind absolute_path =
                       || String.starts_with filetype "application/octet-stream"
                     then return Page
                     else return Other)
-                  (function Magic.Failure _ -> return Other | e -> fail e))
+                  (function _ (* magic failure :) *) -> return Other | e -> fail e))
             | _ -> return Incorrect)
           (function Unix.Unix_error _ -> return NotExists | e -> fail e))
 

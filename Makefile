@@ -1,4 +1,4 @@
-PACKAGES = amall,lwt,lwt.extra,extlib,calendar,polebrush,polebrush.html,textile,textile.html,magic,camlp4.lib
+PACKAGES = amall,lwt,lwt.extra,extlib,calendar,polebrush,polebrush.html,textile,textile.html,camlp4.lib
 emls = $(wildcard views/*.eml)
 views = $(emls:.eml=.ml)
 revised_files = simplexmlparser.ml init.ml gikia.ml

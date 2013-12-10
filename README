@@ -8,7 +8,6 @@ Build dependencies
 * libextlib-ocaml-dev
 * liblwt-ocaml-dev
 * libcalendar-ocaml-dev
-* libmagic-ocaml-dev
 * polebrush >= 0.19
   * http://komar.bitcheese.net/src/polebrush/
 * textile-ocaml
