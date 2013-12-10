@@ -89,20 +89,5 @@ value prefix =
       begin eprintf "You need to specify a path to wiki\n"; exit 1 end
   | s -> s ];
 
-value markup =
-  let default = Markup.Polebrush in
-  try
-    match markup.val with
-    [ "textile" | "Textile" | "TEXTILE" -> Markup.Textile
-    | "polebrush" | "Polebrush" | "POLEBRUSH" -> Markup.Polebrush
-    | "html" | "Html" | "HTML" | "xhtml" | "Xhtml" | "XHTML" -> Markup.Html
-    | _ -> default ]
-  with _ -> default;
-
-module Markup = Markup.Make (struct
-  value markup = markup;
-  value escape_html = escape_html.val;
-end);
-
 value gikia_public_dir = Filename.dirname Sys.argv.(0) ^/ "public";
 

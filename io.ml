@@ -16,6 +16,7 @@
  * Copyright 2010-2012 Alexander Markov *)
 
 open Lwt
+open Init
 open Utils
 open Printf
 open ExtLib
@@ -31,6 +32,7 @@ let string_of_cmd (name, args) =
   Buffer.contents b
 
 let exec ?(timeout=timeout) cmd =
+  (*Lwt_io.printl (string_of_cmd cmd) >>= fun () ->*)
   let p = Lwt_process.open_process_full ~timeout cmd in
   Lwt_io.read p#stdout >>= fun out ->
   Lwt_io.read p#stderr >>= fun err ->
@@ -97,4 +99,41 @@ let kind_of_file segpath st_kind absolute_path =
                   (function Magic.Failure _ -> return Other | e -> fail e))
             | _ -> return Incorrect)
           (function Unix.Unix_error _ -> return NotExists | e -> fail e))
+
+(* Lazy, lazy file *)
+class file ?(prefix=prefix) segpath =
+  let path = lazy (params_to_string segpath) in
+  let absolute_path = lazy (prefix ^/ !!path) in
+  let exists =
+    lazy (file_exists (!!absolute_path)) in
+  let lstat = lazy (
+    Lwt_unix.lstat (!!absolute_path)) in
+  let kind_of_file =
+    lazy (
+      let st_kind = lazy (
+        !!lstat >>= fun lstat ->
+        return lstat.Unix.st_kind) in
+      kind_of_file
+        segpath st_kind absolute_path) in
+  let size =
+    lazy (
+      !!lstat >>= fun lstat ->
+      return & Int64.of_int & lstat.Unix.st_size) in
+
+  object (self)
+    method segpath = segpath
+    method path = !!path
+    method absolute_path = !!absolute_path
+    method exists = !!exists
+    method lstat = !!lstat
+    method st_kind = self#lstat >|= fun s -> s.Unix.st_kind
+    method mtime = self#lstat >|= fun s -> s.Unix.st_mtime
+    method kind_of_file = !!kind_of_file
+    method size = !!size
+    method last_modified_header =
+      self#mtime >|= fun mtime ->
+      let c = CalendarLib.Calendar.from_unixfloat mtime in
+      let rfc822 = Utils.rfc822_of_calendar c in
+      ("Last-Modified", rfc822)
+  end
 

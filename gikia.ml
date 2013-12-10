@@ -18,51 +18,30 @@
 open Lwt;
 open Printf;
 open ExtLib;
-
+open Io;
 open Utils;
 open Init;
-
-class file ?(prefix=prefix) segpath =
-  let path = lazy (params_to_string segpath) in
-  let absolute_path = lazy (prefix ^/ !!path) in
-  let exists =
-    lazy (Io.file_exists (!!absolute_path)) in
-  let lstat = lazy (
-    Lwt_unix.lstat (!!absolute_path)) in
-  let kind_of_file =
-    lazy (
-      let st_kind = lazy (
-        !!lstat >>= fun lstat ->
-        return lstat.Unix.st_kind) in
-      Io.kind_of_file
-        segpath st_kind absolute_path) in
-  let size =
-    lazy (
-      !!lstat >>= fun lstat ->
-      return & Int64.of_int & lstat.Unix.st_size) in
-
-  object (self)
-    method segpath = segpath;
-    method path = !!path;
-    method absolute_path = !!absolute_path;
-    method exists = !!exists;
-    method lstat = !!lstat;
-    method st_kind = self#lstat >|= fun s -> s.Unix.st_kind;
-    method mtime = self#lstat >|= fun s -> s.Unix.st_mtime;
-    method kind_of_file = !!kind_of_file;
-    method size = !!size;
-    method last_modified_header =
-      self#mtime >|= fun mtime ->
-      let c = CalendarLib.Calendar.from_unixfloat mtime in
-      let rfc822 = Utils.rfc822_of_calendar c in
-      ("Last-Modified", rfc822);
-  end;
 
 type request = {
   hostname: string;
   segpath: list string;
   headers: list (string * string);
 };
+
+value markup =
+  let default = Markup.Polebrush in
+  try
+    match Init.markup.val with
+    [ "textile" | "Textile" | "TEXTILE" -> Markup.Textile
+    | "polebrush" | "Polebrush" | "POLEBRUSH" -> Markup.Polebrush
+    | "html" | "Html" | "HTML" | "xhtml" | "Xhtml" | "XHTML" -> Markup.Html
+    | _ -> default ]
+  with _ -> default;
+
+module Markup = Markup.Make (struct
+  value markup = markup;
+  value escape_html = Init.escape_html.val;
+end);
 
 open Views;
 open Routes;
@@ -439,7 +418,9 @@ value send_full_atom request =
 
 value send_atom request segpath =
   let file = new file segpath in
-  file#mtime >>= fun mtime ->
+  catch
+    (fun () -> file#mtime >|= fun mtime -> Mtime mtime)
+    (fun _ -> return AlwaysFresh) >>= fun mtime ->
   let body = lazy (
     let make_iri hash = absolutify request.hostname & url_to_full_change hash in
     let link = absolutify request.hostname & url_to_history segpath in
@@ -447,7 +428,7 @@ value send_atom request segpath =
     Atom.of_page ~file ~title ~link make_iri
   ) in
   send_chunk ~content_type:"application/atom+xml" request
-    { mtime = Mtime mtime;
+    { mtime = mtime;
       body = body };
 
 open Am_All;
@@ -529,7 +510,7 @@ value my_func segpath rq =
         cache_responce request chunk
     | _ -> Lwt.return send_404 ] )
   (fun e ->
-    Lwt_io.eprintl (Printexc.to_string e) >>= fun () ->
+    Lwt_io.eprintf "ERROR: Responce failed with %s" (Printexc.to_string e) >>= fun () ->
     Lwt.return send_500)
 ;
 
