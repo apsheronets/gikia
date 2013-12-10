@@ -454,12 +454,12 @@ value my_func segpath rq =
     | Some s -> Uri.parse_params s ] in
   let request = { hostname; segpath; headers } in
   let file_related_chunk ?content_type file body =
-    file#exists >>= fun
-    [ True ->
+    catch
+      (fun () ->
         file#mtime >>= fun mtime ->
-        send_chunk ?content_type request { mtime = Mtime mtime; body }
-    | False ->
-        send_chunk ?content_type request { mtime = AlwaysFresh; body } ] in
+        return (Mtime mtime))
+      (fun _ -> return AlwaysFresh) >>= fun mtime ->
+    send_chunk ?content_type request { mtime; body } in
   catch (fun () ->
     let file = new file segpath in
     match (segpath, params) with
@@ -477,21 +477,13 @@ value my_func segpath rq =
     | (segpath, [("hash", hash) :: _]) ->
         file_related_chunk file (lazy (render_change hostname segpath hash))
     | (segpath, []) ->
-        (* what should we do with this mess? *)
-        let file = new file segpath in
-        file#exists >>= fun exists ->
-          match exists with
-          [ True ->
-              file#mtime >>= fun mtime ->
-              return & Mtime mtime
-          | False ->
-              return & AlwaysFresh ]
-        >>= fun mtime ->
-        let chunk = {
-          mtime = mtime;
-          body = lazy (main_handler file request)
-        } in
-        cache_responce request chunk
+        catch
+          (fun () ->
+            file#mtime >>= fun mtime ->
+            return (Mtime mtime))
+          (fun _ -> return AlwaysFresh) >>= fun mtime ->
+        let body = lazy (main_handler file request) in
+        cache_responce request { mtime; body }
     | _ -> Lwt.return send_404 ] )
   (fun e ->
     Lwt_io.eprintf "ERROR: Responce failed with %s" (Printexc.to_string e) >>= fun () ->
