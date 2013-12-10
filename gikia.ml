@@ -481,7 +481,7 @@ value my_func segpath rq =
         cache_responce request { mtime; body }
     | _ -> Lwt.return send_404 ] )
   (fun e ->
-    Lwt_io.eprintf "ERROR: Responce failed with %s" (Printexc.to_string e) >>= fun () ->
+    Lwt_io.eprintf "ERROR: Responce failed with %s\n" (Printexc.to_string e) >>= fun () ->
     Lwt.return send_500)
 ;
 
