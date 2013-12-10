@@ -41,6 +41,17 @@ let exec ?(timeout=timeout) cmd =
   then return out
   else fail (Error (sprintf "%s: %s" (string_of_cmd cmd) err))
 
+let pool = Lwt_pool.create 50 (fun () -> return ())
+
+let exec ?timeout cmd =
+  Lwt_pool.use pool (fun () -> exec ?timeout cmd)
+
+let open_process_full ?timeout cmd =
+  Lwt_pool.use pool (fun () -> return & Lwt_process.open_process_full ?timeout cmd)
+
+let pread_lines ?timeout cmd =
+  Lwt_pool.use pool (fun () -> return & Lwt_process.pread_lines ?timeout cmd)
+
 let read path =
   Lwt_io.with_file
     Lwt_io.input

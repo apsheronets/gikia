@@ -58,7 +58,7 @@ let wdiff_cmd =
 let wdiff str =
   (* TODO: add debug here *)
   let command = Lwt_process.shell wdiff_cmd in
-  let p = Lwt_process.open_process_full ~timeout command in
+  Io.open_process_full ~timeout command >>= fun p ->
   Lwt_io.write p#stdin str >>= fun () ->
   Lwt_io.close p#stdin  >>= fun () ->
   Lwt_io.read  p#stdout >>= fun out ->
@@ -264,7 +264,7 @@ struct
         (quote repodir) range path in
     catch (fun () ->
       let cmd = Lwt_process.shell sh in
-      let lines = Lwt_process.pread_lines ~timeout cmd in
+      Io.pread_lines ~timeout cmd >>= fun lines ->
       let get_change lines =
         let get str s =
           if String.starts_with str s
