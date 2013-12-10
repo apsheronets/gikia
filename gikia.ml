@@ -403,33 +403,17 @@ value cache_responce request chunk =
       (fun _ -> send_responce & http_header_of_mtime mtime) (* TODO: log it *)
   ];
 
-value send_full_atom request =
-  let file = new file [] in
-  file#mtime >>= fun mtime ->
-  let body = lazy (
-    let make_iri hash = absolutify request.hostname & url_to_full_change hash in
-    let link = absolutify request.hostname & url_to_history [] in
-    let title = sprintf "Recent changes to %s" request.hostname in
-    Atom.of_repo ~file ~title ~link make_iri
-  ) in
-  send_chunk ~content_type:"application/atom+xml" request
-    { mtime = Mtime mtime;
-      body = body };
+value render_full_atom request file =
+  let make_iri hash = absolutify request.hostname & url_to_full_change hash in
+  let link = absolutify request.hostname & url_to_history [] in
+  let title = sprintf "Recent changes to %s" request.hostname in
+  Atom.of_repo ~file ~title ~link make_iri;
 
-value send_atom request segpath =
-  let file = new file segpath in
-  catch
-    (fun () -> file#mtime >|= fun mtime -> Mtime mtime)
-    (fun _ -> return AlwaysFresh) >>= fun mtime ->
-  let body = lazy (
-    let make_iri hash = absolutify request.hostname & url_to_full_change hash in
-    let link = absolutify request.hostname & url_to_history segpath in
-    let title = sprintf "Recent changes to %s" file#path in
-    Atom.of_page ~file ~title ~link make_iri
-  ) in
-  send_chunk ~content_type:"application/atom+xml" request
-    { mtime = mtime;
-      body = body };
+value render_atom request file =
+  let make_iri hash = absolutify request.hostname & url_to_full_change hash in
+  let link = absolutify request.hostname & url_to_history request.segpath in
+  let title = sprintf "Recent changes to %s" file#path in
+  Atom.of_page ~file ~title ~link make_iri;
 
 open Am_All;
 open Amall_types;
@@ -469,31 +453,31 @@ value my_func segpath rq =
     [ None -> []
     | Some s -> Uri.parse_params s ] in
   let request = { hostname=hostname; segpath=segpath; headers=headers } in
-  let file_related_chunk file body =
+  let file_related_chunk ?content_type file body =
     file#exists >>= fun
     [ True ->
         file#mtime >>= fun mtime ->
-        send_chunk request { mtime = Mtime mtime; body }
+        send_chunk ?content_type request { mtime = Mtime mtime; body }
     | False ->
-        send_chunk request { mtime = AlwaysFresh; body } ] in
+        send_chunk ?content_type request { mtime = AlwaysFresh; body } ] in
   catch (fun () ->
+    let file = new file segpath in
     match (segpath, params) with
     [ ([],      [("show", "log")]) ->
-        let file = new file segpath in
         file_related_chunk file (lazy (render_full_history hostname))
     | (segpath, [("show", "log")]) ->
-        let file = new file segpath in
         file_related_chunk file (lazy (render_history request file))
-    | ([],      [("show", "atom")]) -> send_full_atom request
-    | (segpath, [("show", "atom")]) -> send_atom request segpath
+    | ([],      [("show", "atom")]) ->
+        file_related_chunk ~content_type:"application/atom+xml" file (lazy (render_full_atom request file))
+    | (segpath, [("show", "atom")]) ->
+        file_related_chunk ~content_type:"application/atom+xml" file (lazy (render_atom request file))
     | (segpath, [("show", "source")]) -> send_source request
     | ([],      [("hash", hash)]) ->
-        let file = new file segpath in
         file_related_chunk file (lazy (render_full_change hostname hash))
     | (segpath, [("hash", hash) :: _]) ->
-        let file = new file segpath in
         file_related_chunk file (lazy (render_change hostname segpath hash))
     | (segpath, []) ->
+        (* what should we do with this mess? *)
         let file = new file segpath in
         file#exists >>= fun exists ->
           match exists with
