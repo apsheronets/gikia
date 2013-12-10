@@ -352,6 +352,31 @@ value send_source request =
 open Cache;
 open CalendarLib;
 
+value send_body_or_304 request chunk send_f =
+  match chunk.mtime with
+  (* case 1: we have too dynamic page *)
+  [ AlwaysFresh -> send_f & just_modified_header ()
+  | Mtime mtime ->
+      let if_modified_since =
+        try
+          let (c, tz) =
+            List.assoc "If-Modified-Since" request.headers
+            >> calendar_of_rfc2282 in
+          Some c
+        with _ -> None in
+      match if_modified_since with
+      (* case 2: we didn't got If-Modified-Since header from client *)
+      [ None -> send_f & http_header_of_mtime mtime
+      | Some if_modified_since ->
+          let last_modified =
+            Calendar.from_unixfloat mtime >> Calendar.to_gmt in
+          if Calendar.compare last_modified if_modified_since > 0
+          (* case 3: user's copy is too old, our is too new *)
+          then send_f & http_header_of_mtime mtime
+          (* case 4: user's copy is up to date, send 304 *)
+          else return & send_not_modified & http_header_of_mtime mtime ]
+  ];
+
 value send_chunk ?content_type request chunk =
   let send_body last_modified =
     let rs_all =
@@ -366,42 +391,12 @@ value send_chunk ?content_type request chunk =
     ; rs_headers = { rs_all }
     ; rs_body = Body_string body
     } in
-  match chunk.mtime with
-  [ AlwaysFresh -> send_body & just_modified_header ()
-  | Mtime mtime ->
-      (catch (fun () ->
-        let last_modified =
-          Calendar.from_unixfloat mtime
-          >> Calendar.to_gmt in
-        let (if_modified_since, _) =
-          List.assoc "If-Modified-Since" request.headers
-          >> calendar_of_rfc2282 in
-        if Calendar.compare last_modified if_modified_since > 0
-        then send_body & http_header_of_mtime mtime
-        else
-          return & send_not_modified & http_header_of_mtime mtime))
-      (fun _ -> send_body & http_header_of_mtime mtime) (* TODO: log it *)
-  ];
+  send_body_or_304 request chunk send_body;
 
 value cache_responce request chunk =
   let send_responce last_modified =
     !!(chunk.body) last_modified in
-  match chunk.mtime with
-  [ AlwaysFresh -> send_responce & just_modified_header ()
-  | Mtime mtime ->
-      (catch (fun () ->
-        let last_modified =
-          Calendar.from_unixfloat mtime
-          >> Calendar.to_gmt in
-        let (if_modified_since, _) =
-          List.assoc "If-Modified-Since" request.headers
-          >> calendar_of_rfc2282 in
-        if Calendar.compare last_modified if_modified_since > 0
-        then send_responce & http_header_of_mtime mtime
-        else
-          return & send_not_modified & http_header_of_mtime mtime))
-      (fun _ -> send_responce & http_header_of_mtime mtime) (* TODO: log it *)
-  ];
+  send_body_or_304 request chunk send_responce;
 
 value render_full_atom request file =
   let make_iri hash = absolutify request.hostname & url_to_full_change hash in
