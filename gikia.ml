@@ -249,7 +249,7 @@ value send_file ?content_type file =
   file#size >|= fun size ->
   { rs_status_code = 200
   ; rs_reason_phrase = "OK"
-  ; rs_headers = { rs_all = rs_all }
+  ; rs_headers = { rs_all }
   ; rs_body = File_contents file#absolute_path size
   };
 
@@ -363,7 +363,7 @@ value send_chunk ?content_type request chunk =
     !!(chunk.body) >|= fun body ->
     { rs_status_code = 200
     ; rs_reason_phrase = "OK"
-    ; rs_headers = { rs_all = rs_all }
+    ; rs_headers = { rs_all }
     ; rs_body = Body_string body
     } in
   match chunk.mtime with
@@ -452,7 +452,7 @@ value my_func segpath rq =
     match rq.rq_uri.Uri_type.query with
     [ None -> []
     | Some s -> Uri.parse_params s ] in
-  let request = { hostname=hostname; segpath=segpath; headers=headers } in
+  let request = { hostname; segpath; headers } in
   let file_related_chunk ?content_type file body =
     file#exists >>= fun
     [ True ->
