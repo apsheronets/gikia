@@ -19,13 +19,13 @@ open Lwt
 open ExtLib
 open Printf
 open Utils
-open CalendarLib
+module C = CalendarLib.Calendar.Precise
 open Simplexmlparser
 
 let timeout = Io.timeout
 
 type date =
-  | Calendar of Calendar.t
+  | Calendar of C.t
   | Rfc of string (* rfc 2828 *)
 
 type change = {
@@ -93,7 +93,7 @@ struct
   let to_calendar s =
     Scanf.sscanf s "%4u%2u%2u%2u%2u%2u"
       (fun y m d h min s ->
-        Calendar.make y m d h min s)
+        C.make y m d h min s)
 
   let get_changes ?first ?count ?path repodir =
     let cmd =

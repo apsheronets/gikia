@@ -263,12 +263,12 @@ value send_file ?content_type request file =
   catch (fun () ->
     file#mtime >>= fun mtime ->
     let last_modified =
-      CalendarLib.Calendar.from_unixfloat mtime
-      >> CalendarLib.Calendar.to_gmt in
+      CalendarLib.Calendar.Precise.from_unixfloat mtime
+      >> CalendarLib.Calendar.Precise.to_gmt in
     let (if_modified_since, _) =
       List.assoc "If-Modified-Since" request.headers
       >> calendar_of_rfc2282 in
-    if CalendarLib.Calendar.compare last_modified if_modified_since > 0
+    if CalendarLib.Calendar.Precise.compare last_modified if_modified_since > 0
     then send_file ?content_type file
     else
       file#last_modified_header >|=
@@ -351,6 +351,7 @@ value send_source request =
 
 open Cache;
 open CalendarLib;
+module C = CalendarLib.Calendar.Precise;
 
 value send_body_or_304 request chunk send_f =
   match chunk.mtime with
@@ -369,8 +370,8 @@ value send_body_or_304 request chunk send_f =
       [ None -> send_f & http_header_of_mtime mtime
       | Some if_modified_since ->
           let last_modified =
-            Calendar.from_unixfloat mtime >> Calendar.to_gmt in
-          if Calendar.compare last_modified if_modified_since > 0
+            Calendar.Precise.from_unixfloat mtime >> Calendar.Precise.to_gmt in
+          if Calendar.Precise.compare last_modified if_modified_since > 0
           (* case 3: user's copy is too old, our is too new *)
           then send_f & http_header_of_mtime mtime
           (* case 4: user's copy is up to date, send 304 *)

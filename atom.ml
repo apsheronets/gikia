@@ -20,7 +20,7 @@
 open Lwt
 open Utils
 open Init
-open CalendarLib
+module C = CalendarLib.Calendar.Precise
 
 let entry_of_change make_iri prefix path c =
   Vcs.get_diff prefix path c.Vcs.hash >>= fun diff ->
@@ -49,7 +49,7 @@ let of_changes ~file ~title ~link make_iri prefix path changes =
     (fun () -> file#mtime)
     (fun _ -> return 0.)
   >>= fun mtime ->
-  let updated = rfc3339_of_calendar (Calendar.from_unixfloat mtime) in
+  let updated = rfc3339_of_calendar (C.from_unixfloat mtime) in
   return (
     "<feed xmlns=\"http://www.w3.org/2005/Atom\">" ^
       "<title>" ^ esc title ^ "</title>" ^

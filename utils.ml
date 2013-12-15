@@ -93,8 +93,10 @@ let rec exude p = function
 
 (* Calendar *)
 
+module C = CalendarLib.Calendar.Precise
+
 let rfc3339_of_calendar c =
-  let module C = CalendarLib.Calendar in
+  let module C = CalendarLib.Calendar.Precise in
   let module D = CalendarLib.Date in
   let month x = match C.month x with
   |D.Jan -> 1 |D.Feb -> 2 |D.Mar -> 3
@@ -106,17 +108,17 @@ let rfc3339_of_calendar c =
     (C.minute c) (C.second c)
 
 let rfc822_of_calendar c =
-  CalendarLib.Printer.Calendar.sprint "%a, %d %b %Y %T %z" c
+  CalendarLib.Printer.Precise_Calendar.sprint "%a, %d %b %Y %T %z" c
 
 (*(* haven't read http://tools.ietf.org/html/rfc2822#section-3.3
  * who cares *)
 let rfc2282_of_calendar =
-  CalendarLib.Printer.Calendar.sprint
+  CalendarLib.Printer.Precise_Calendar.sprint
     "%a, %d %b %Y %H:%M:%S %z"*)
 
 (* "Sun, 08 Dec 2013 22:27:45 +0400" *)
 let calendar_of_rfc2282 s =
-  let module C = CalendarLib.Calendar in
+  let module C = CalendarLib.Calendar.Precise in
   String.nsplit s " "
   >> List.filter (function "" -> false | _ -> true) >>
   function

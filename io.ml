@@ -137,7 +137,7 @@ class file ?(prefix=prefix) segpath =
     method size = !!size
     method last_modified_header =
       self#mtime >|= fun mtime ->
-      let c = CalendarLib.Calendar.from_unixfloat mtime in
+      let c = CalendarLib.Calendar.Precise.from_unixfloat mtime in
       let rfc822 = Utils.rfc822_of_calendar c in
       ("Last-Modified", rfc822)
   end

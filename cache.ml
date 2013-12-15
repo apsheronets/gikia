@@ -24,7 +24,7 @@ type mtime =
   | AlwaysFresh (* for dynamic stuff *)
 
 let http_header_of_mtime mtime =
-  let c = CalendarLib.Calendar.from_unixfloat mtime in
+  let c = CalendarLib.Calendar.Precise.from_unixfloat mtime in
   let rfc822 = Utils.rfc822_of_calendar c in
   ("Last-Modified", rfc822)
 
@@ -34,7 +34,7 @@ type 'a chunk = {
 }
 
 let just_modified_header () =
-  let c = CalendarLib.Calendar.now () in
+  let c = CalendarLib.Calendar.Precise.now () in
   let rfc822 = Utils.rfc822_of_calendar c in
   ("Last-Modified", rfc822)
 
