@@ -76,11 +76,14 @@ let magic_file path =
 type kind_of_file = Page | Other | Html | Dir | NotExists | Incorrect | VcsFile
 
 (* Returns a type of the file *)
-let kind_of_file segpath st_kind absolute_path =
+let kind_of_file segpath exists st_kind absolute_path =
   let name = try List.last segpath with List.Empty_list -> "" in
   match name with
   | ".." | "." -> return Incorrect
   | _ -> (
+      !!exists >>= function
+      | false -> return NotExists
+      | true -> (
       match segpath with
       | "_darcs"::_ -> return VcsFile
       | ".git"  ::_ -> return VcsFile
@@ -91,8 +94,8 @@ let kind_of_file segpath st_kind absolute_path =
             Lazy.force st_kind >>= fun st_kind ->
             match st_kind with
             | Unix.S_DIR -> return Dir
-            | Unix.S_REG -> (
-                if String.ends_with name ".html"
+            | Unix.S_REG ->
+                (if String.ends_with name ".html"
                 then return Html
                 else
                   catch (fun () ->
@@ -101,9 +104,9 @@ let kind_of_file segpath st_kind absolute_path =
                       || String.starts_with filetype "application/octet-stream"
                     then return Page
                     else return Other)
-                  (function _ (* magic failure :) *) -> return Other | e -> fail e))
+                  (function _ (* magic failure :) *) -> return Other))
             | _ -> return Incorrect)
-          (function Unix.Unix_error _ -> return NotExists | e -> fail e))
+          (function Unix.Unix_error _ -> return NotExists | e -> fail e)))
 
 (* Lazy, lazy file *)
 class file ?(prefix=prefix) segpath =
@@ -115,11 +118,14 @@ class file ?(prefix=prefix) segpath =
     Lwt_unix.lstat (!!absolute_path)) in
   let kind_of_file =
     lazy (
-      let st_kind = lazy (
-        !!lstat >>= fun lstat ->
-        return lstat.Unix.st_kind) in
-      kind_of_file
-        segpath st_kind absolute_path) in
+      catch (fun () ->
+        let st_kind = lazy (
+          !!lstat >>= fun lstat ->
+          return lstat.Unix.st_kind) in
+        kind_of_file
+          segpath exists st_kind absolute_path)
+      (function Unix.Unix_error _ -> return NotExists | e -> fail e)
+    ) in
   let size =
     lazy (
       !!lstat >>= fun lstat ->
