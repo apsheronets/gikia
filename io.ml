@@ -85,7 +85,7 @@ let kind_of_file segpath st_kind absolute_path =
       | "_darcs"::_ -> return VcsFile
       | ".git"  ::_ -> return VcsFile
       | ["robots.txt"] -> return Other
-      | ["style.txt"]  -> return Other
+      | ["style.css"]  -> return Other
       | _ ->
           catch (fun () ->
             Lazy.force st_kind >>= fun st_kind ->
