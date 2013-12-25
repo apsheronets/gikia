@@ -48,7 +48,7 @@ open Routes;
 
 (* Makes an article *)
 value render_article hostname file =
-  Markup.get_page file#absolute_path >>= fun (title, content) ->
+  Markup.get_page file#absolute_path >>= fun ((title, description), content) ->
   let title =
     match title with
     [ Some title -> title
@@ -57,6 +57,7 @@ value render_article hostname file =
   let a =
     object
       method title = title;
+      method description = description;
       method content = content;
       method links = links;
       method file = file;
@@ -71,6 +72,7 @@ value render_full_history hostname =
   let a =
     object
       method title = title;
+      method description = None;
       method changes = changes;
       method hostname = hostname;
       method links = "";
@@ -88,6 +90,7 @@ value render_history request file =
   let a =
     object
       method title = title;
+      method description = None;
       method changes = changes;
       method links = links;
       method file = file;
@@ -105,6 +108,7 @@ value render_full_change hostname hash =
     object
       method wdiff = wdiff;
       method title = title;
+      method description = None;
       method links = "";
       method hostname = hostname;
     end in
@@ -122,6 +126,7 @@ value render_change hostname segpath hash =
       method wdiff = wdiff;
       method title = title;
       method hostname = hostname;
+      method description = None;
       method hash = hash;
       method file = file;
       method regular_file = True; (* FIXME *)
@@ -177,6 +182,7 @@ value render_index hostname prefix dir =
       method links = link_to_atom dir#segpath;
       method lis = lis;
       method title = title;
+      method description = None;
       method hostname = hostname;
       method file = dir;
       method regular_file = False;

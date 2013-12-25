@@ -15,6 +15,8 @@
  *
  * Copyright 2010-2013 Alexander Markov *)
 
+(** misc fucntions *)
+
 open ExtLib
 
 (* Useful combinators *)
