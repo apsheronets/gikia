@@ -5,6 +5,10 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+    <!-- v kludges for android browser v -->
+    <meta name="HandheldFriendly" content="true" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- ^ kludges for android browser ^ -->
     <link type="text/css" rel="stylesheet" href="/style.css" />
     <link rel="alternate" type="application/atom+xml" title="Recent changes to whole <%= a#hostname %>" href="?show=atom" />
     <% begin match a#description with None -> () | Some desc -> %>
