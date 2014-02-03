@@ -9,13 +9,13 @@ Build dependencies
 * liblwt-ocaml-dev
 * libcalendar-ocaml-dev
 * polebrush >= 0.19
-  * http://komar.bitcheese.net/src/polebrush/
+  * http://komar.in/src/polebrush/
 * textile-ocaml
-  * http://komar.bitcheese.net/en/code/textile-ocaml
+  * http://komar.in/en/code/textile-ocaml
 * ocamldep-sorter
-  * http://komar.bitcheese.net/en/code/ocamldep-sorter
+  * http://komar.in/en/code/ocamldep-sorter
 * ecaml
-  * http://komar.bitcheese.net/en/code/ecaml
+  * http://komar.in/en/code/ecaml
 * amall
   * https://bitbucket.org/gds/amall
     * libcryptokit-ocaml-dev
