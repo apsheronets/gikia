@@ -33,10 +33,23 @@ let string_of_cmd (name, args) =
 
 let exec ?(timeout=timeout) cmd =
   (*Lwt_io.printl (string_of_cmd cmd) >>= fun () ->*)
-  let p = Lwt_process.open_process_full ~timeout cmd in
-  Lwt_io.read p#stdout >>= fun out ->
-  Lwt_io.read p#stderr >>= fun err ->
-  p#close >>= fun _ ->
+  let p = Lwt_process.open_process_full cmd in
+  let f =
+    Lwt_io.read p#stdout >>= fun out ->
+    Lwt_io.read p#stderr >>= fun err ->
+    p#close >>= fun _ ->
+    return (out, err) in
+  (Lwt.pick
+    [ (Lwt_unix.sleep timeout >>= fun _ -> return None);
+      (f >>= fun r -> return (Some r))] >>=
+  function
+  | None ->
+      (*Lwt_io.printl "timeout!" >>= fun () ->*)
+      p#kill 9; p#close >>= fun _ ->
+      (*Lwt_io.printl "killed and closed" >>= fun _ ->*)
+      fail (Error (sprintf "Timeout, sorry: %s" (string_of_cmd cmd)))
+  | Some r ->
+      return r) >>= fun (out, err) ->
   if String.length err = 0
   then return out
   else fail (Error (sprintf "%s: %s" (string_of_cmd cmd) err))
