@@ -50,7 +50,7 @@ let of_changes ~file ~title ~link make_iri prefix path changes =
     (fun _ -> return 0.)
   >>= fun mtime ->
   let updated = rfc3339_of_calendar (C.from_unixfloat mtime) in
-  return (
+  return (Cd_Utf8.fix_broken_utf8 (
     "<feed xmlns=\"http://www.w3.org/2005/Atom\">" ^
       "<title>" ^ esc title ^ "</title>" ^
       "<updated>" ^ esc updated ^ "</updated>" ^
@@ -58,7 +58,7 @@ let of_changes ~file ~title ~link make_iri prefix path changes =
       "<link href=\"" ^ esc link ^ "\" />" ^
       String.concat "" entries ^
     "</feed>"
-  )
+  ))
 
 let of_page ~file ~title ~link make_iri =
   Vcs.get_changes prefix ~count:20 ~path:file#absolute_path >>= fun changes ->
