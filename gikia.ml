@@ -225,6 +225,7 @@ module I = Iteratees.Make(IO);
 
 value send_404 =
   { rs_status_code = 404
+  ; rs_http_ver = (1, 1)
   ; rs_reason_phrase = "Not found"
   ; rs_headers = { rs_all = [] }
   ; rs_body = Body_string render_404
@@ -232,6 +233,7 @@ value send_404 =
 
 value send_410 path =
   { rs_status_code = 410
+  ; rs_http_ver = (1, 1)
   ; rs_reason_phrase = "Gone"
   ; rs_headers = { rs_all = [] }
   ; rs_body = Body_string (render_410 path)
@@ -239,6 +241,7 @@ value send_410 path =
 
 value send_500 =
   { rs_status_code = 500
+  ; rs_http_ver = (1, 1)
   ; rs_reason_phrase = "Internal Server Error"
   ; rs_headers = { rs_all = [] }
   ; rs_body = Body_string render_500
@@ -254,6 +257,7 @@ value send_file ?content_type file =
   let rs_all = [last_modified::rs_all] in
   file#size >|= fun size ->
   { rs_status_code = 200
+  ; rs_http_ver = (1, 1)
   ; rs_reason_phrase = "OK"
   ; rs_headers = { rs_all }
   ; rs_body = File_contents file#absolute_path size
@@ -261,6 +265,7 @@ value send_file ?content_type file =
 
 value send_not_modified last_modified =
  { rs_status_code = 304
+ ; rs_http_ver = (1, 1)
  ; rs_reason_phrase = "Not Modified"
  ; rs_headers = { rs_all = [last_modified] }
  ; rs_body = No_body };
@@ -285,6 +290,7 @@ value send_file ?content_type request file =
 value redirect_to path =
   let location_header = ("Location", path) in
   { rs_status_code = 301
+  ; rs_http_ver = (1, 1)
   ; rs_reason_phrase = "Moved Permanently"
   ; rs_headers = { rs_all = [location_header] }
   (*; rs_body = No_body*)
@@ -297,6 +303,7 @@ value send_ok_with ?(headers=[]) ?content_type body =
     [ None -> [("Content-Type", "text/html")::headers]
     | Some s -> [("Content-Type", s)::headers] ] in
   { rs_status_code = 200
+  ; rs_http_ver = (1, 1)
   ; rs_reason_phrase = "OK"
   ; rs_headers = { rs_all = headers }
   ; rs_body = Body_string body
@@ -394,6 +401,7 @@ value send_chunk ?content_type request chunk =
       [last_modified::rs_all] in
     !!(chunk.body) >|= fun body ->
     { rs_status_code = 200
+    ; rs_http_ver = (1, 1)
     ; rs_reason_phrase = "OK"
     ; rs_headers = { rs_all }
     ; rs_body = Body_string body
