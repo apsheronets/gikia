@@ -233,6 +233,7 @@ let fix_broken_ascii s =
   String.map (fun c ->
       match int_of_char c with
       | 14 -> ' '
+      | 20 -> ' '
       | _ -> c) s
 
 
