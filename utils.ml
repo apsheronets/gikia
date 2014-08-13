@@ -229,3 +229,7 @@ let url_to_full_change hash =
   "/?hash=" ^ urlencode hash
 
 
+let fix_broken_ascii s =
+  String.map (fun c -> if int_of_char c < 32 then ' ' else c) s
+
+
