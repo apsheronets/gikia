@@ -478,7 +478,14 @@ value my_func segpath rq =
     | (segpath, [("show", "log")]) ->
         file_related_chunk file (lazy (render_history request file))
     | ([],      [("show", "atom")]) ->
-        file_related_chunk ~content_type:"application/atom+xml" file (lazy (render_full_atom request file))
+        Vcs.vcs prefix >>= fun vcs ->
+        let vcs_dir =
+          match vcs with
+          [ Vcs.Darcs -> "_darcs"
+          | Vcs.Git -> ".git" ] in
+        let file = new file segpath in
+        let vcs_dir_file = new file [vcs_dir] in
+        file_related_chunk ~content_type:"application/atom+xml" vcs_dir_file (lazy (render_full_atom request file))
     | (segpath, [("show", "atom")]) ->
         file_related_chunk ~content_type:"application/atom+xml" file (lazy (render_atom request file))
     | (segpath, [("show", "source")]) -> send_source request
