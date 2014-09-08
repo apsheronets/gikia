@@ -48,7 +48,7 @@ open Routes;
 
 (* Makes an article *)
 value render_article hostname file =
-  Markup.get_page file#absolute_path >>= fun ((title, description), content) ->
+  Markup.get_page file#absolute_path >>= fun (title, content) ->
   let title =
     match title with
     [ Some title -> title
@@ -57,7 +57,6 @@ value render_article hostname file =
   let a =
     object
       method title = title;
-      method description = description;
       method content = content;
       method links = links;
       method file = file;

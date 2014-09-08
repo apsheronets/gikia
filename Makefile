@@ -7,8 +7,9 @@ ocamllex_files = xmllexer.mll
 all_files = $(views) $(revised_files) $(original_files)
 
 NAME = gikia
-CAMLC   = ocamlfind ocamlc   -I views/ -thread $(LIB)
-CAMLOPT = ocamlfind ocamlopt -I views/ -thread $(LIB)
+CAMLC   = ocamlfind ocamlc   -g -I views/ -thread $(LIB)
+CAMLOPT = ocamlfind ocamlopt -g -I views/ -thread $(LIB)
+CAMLDOC = ocamlfind ocamldoc -I views/ -thread $(LIB)
 CAMLDEP = ocamlfind ocamldep -I views/
 LIB = -package $(PACKAGES)
 PP = -pp camlp4r
@@ -55,6 +56,17 @@ $(revised_files:.ml=.cmi): %.cmi: %.mli
 	$(CAMLC) $(PP) -c $<
 $(revised_optobjs): %.cmx: %.ml
 	$(CAMLOPT) $(PP) -c $<
+
+doc: $(OBJS) $(original_files) $(revised_files)
+	-mkdir -p doc
+	mkdir -p temp temp/views/
+	cp *.ml* temp/
+	cp views/*.ml* temp/views/
+	for file in $(revised_files); do \
+	camlp4r $$file -o temp/$$file ; \
+	done
+	$(CAMLDOC) -html -keep-code -d doc/ $(addprefix temp/,$(revised_files) $(original_files))
+	rm -r temp
 
 clean:
 	-rm -f *.cm[ioxa] *.cmx[as] *.o *.a *~

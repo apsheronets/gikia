@@ -30,26 +30,12 @@ end
 type title = string
 type abstract = string
 
-(* Enum kudge *)
-let peek2 t =
-  match Enum.get t with
-  | None -> None
-  | Some x1 -> (
-      match Enum.get t with
-      | None -> Enum.push t x1; None
-      | Some x2 -> (
-          Enum.push t x2;
-          Enum.push t x1;
-          Some (x1, x2)
-        )
-    )
-
 module Make(Opt: Options) = struct
 
   module type MARKUP =
   sig
     val get_header_of_page : string -> string option Lwt.t
-    val get_page : bool -> string -> ((title option * abstract option) * string) Lwt.t
+    val get_page : bool -> string -> (title option * string) Lwt.t
   end
 
   module Textile : MARKUP =
@@ -103,7 +89,7 @@ module Make(Opt: Options) = struct
         let tt = Textile_parser.of_stream lines in
         let title = get_header_from_textile tt in
         string_of_textile escape_html tt >> fun content ->
-        (title, None), content in
+        title, content in
       Lwt_preemptive.detach f ()
 
   end
@@ -114,12 +100,6 @@ module Make(Opt: Options) = struct
     let get_header_from_polebrush polebrush =
       match Enum.peek polebrush with
       | Some (Polebrush.Header (_, (_, lines))) ->
-          Some (String.concat " " (List.map Polebrush.string_of_line lines))
-      | _ -> None
-
-    let get_description_from_polebrush polebrush =
-      match peek2 polebrush with
-      | Some (Polebrush.Header _, Polebrush.Abstract (_, lines)) ->
           Some (String.concat " " (List.map Polebrush.string_of_line lines))
       | _ -> None
 
@@ -161,9 +141,8 @@ module Make(Opt: Options) = struct
           with End_of_file -> close_in chan; None) in
         let pb = Polebrush_parser.enum lines in
         let title = get_header_from_polebrush pb in
-        let description = get_description_from_polebrush pb in
         string_of_polebrush escape_html pb >> fun content ->
-        (title, description), content in
+        title, content in
       Lwt_preemptive.detach f ()
 
   end
@@ -174,7 +153,7 @@ module Make(Opt: Options) = struct
     let get_page _ _a =
       get_header_of_page _a >>= fun title ->
       Io.read _a >>= fun content ->
-      return ((title, None), content)
+      return (title, content)
   end
 
   let get_header_of_page =

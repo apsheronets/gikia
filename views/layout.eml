@@ -11,9 +11,6 @@
     <!-- ^ kludges for android browser ^ -->
     <link type="text/css" rel="stylesheet" href="/style.css" />
     <link rel="alternate" type="application/atom+xml" title="Recent changes to whole <%= a#hostname %>" href="?show=atom" />
-    <% begin match a#description with None -> () | Some desc -> %>
-      <meta name="description" content="<%=desc%>" />
-    <% end; %>
     <%=raw a#links %>
     <title><%= a#title %></title>
 
