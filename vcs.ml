@@ -95,6 +95,10 @@ struct
       (fun y m d h min s ->
         C.make y m d h min s)
 
+  (* pool for darcses *)
+  let pool = Lwt_pool.create 3 (fun () -> return ())
+  let exec ?timeout cmd = Lwt_pool.use pool (fun () -> Io.exec ?timeout cmd)
+
   let get_changes ?first ?count ?path repodir =
     let cmd =
       let range =
@@ -109,7 +113,7 @@ struct
           match path with Some p -> [|p|] | None -> [||] ] in
       ("darcs", args) in
     catch (fun () ->
-      Io.exec cmd >|= fun str ->
+      exec cmd >|= fun str ->
       let attrib attrs name =
         let _, v = List.find (fun (n, _) -> n = name) attrs in
         v in
@@ -152,18 +156,18 @@ struct
   let get_diff repodir page hash =
     let cmd = ("darcs", [|"darcs"; "diff"; "--store-in-memory"; "--quiet"; "-u";
       "--repodir="^repodir; "--match=hash "^hash; page|]) in
-    Io.exec cmd
+    exec cmd
 
   let get_full_diff repodir hash =
     let cmd = ("darcs", [|"darcs"; "diff"; "--store-in-memory"; "--quiet"; "-u";
       "--repodir="^repodir; "--match=hash "^hash|]) in
-    Io.exec cmd
+    exec cmd
 
   let get_wdiff repodir page hash =
     let sh = sprintf "darcs diff --store-in-memory -u --quiet '--repodir=%s' '--match=hash %s' '%s' | %s"
       (quote repodir) (quote hash) (quote page) wdiff_cmd in
     let cmd = Lwt_process.shell sh in
-    Io.exec cmd
+    exec cmd
 
   type summary_file_status =
     | Move of (r_path * r_path)
@@ -180,7 +184,7 @@ struct
           "--repodir="^repodir; path|] in
       ("darcs", args) in
     catch (fun () ->
-      Io.exec cmd >|= fun str ->
+      exec cmd >|= fun str ->
       let process_summary =
         let r_path_of_string s =
           r_path_of_string (String.strip (unescape s)) in

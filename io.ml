@@ -21,7 +21,7 @@ open Utils
 open Printf
 open ExtLib
 
-let timeout = 10.0
+let timeout = 15.0
 
 exception Error of string
 
