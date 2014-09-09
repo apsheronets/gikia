@@ -105,13 +105,20 @@ struct
         match count with
         | Some c -> [| sprintf "--max-count=%u" c |]
         | None   -> [| |] in
-      let args =
+      (*let args =
         Array.concat [
           [|"darcs"; "changes"; "--quiet"; "--xml-output"|];
           range;
           [|"--repodir="^repodir|];
           match path with Some p -> [|p|] | None -> [||] ] in
-      ("darcs", args) in
+      ("darcs", args) in*)
+      let args =
+        Array.concat [
+          [|"nice"; "-n10"; "ionice"; "-c3"; "darcs"; "changes"; "--quiet"; "--xml-output"|];
+          range;
+          [|"--repodir="^repodir|];
+          match path with Some p -> [|p|] | None -> [||] ] in
+      ("nice", args) in
     catch (fun () ->
       exec cmd >|= fun str ->
       let attrib attrs name =
@@ -154,17 +161,21 @@ struct
     | None   -> return changes
 
   let get_diff repodir page hash =
-    let cmd = ("darcs", [|"darcs"; "diff"; "--store-in-memory"; "--quiet"; "-u";
+    (*let cmd = ("darcs", [|"darcs"; "diff"; "--store-in-memory"; "--quiet"; "-u";
+      "--repodir="^repodir; "--match=hash "^hash; page|]) in*)
+    let cmd = ("nice", [|"nice"; "-n10"; "ionice"; "-c3"; "darcs"; "diff"; "--store-in-memory"; "--quiet"; "-u";
       "--repodir="^repodir; "--match=hash "^hash; page|]) in
     exec cmd
 
   let get_full_diff repodir hash =
-    let cmd = ("darcs", [|"darcs"; "diff"; "--store-in-memory"; "--quiet"; "-u";
+    (*let cmd = ("darcs", [|"darcs"; "diff"; "--store-in-memory"; "--quiet"; "-u";
+      "--repodir="^repodir; "--match=hash "^hash|]) in*)
+    let cmd = ("nice", [|"nice"; "-n10"; "ionice"; "-c3"; "darcs"; "diff"; "--store-in-memory"; "--quiet"; "-u";
       "--repodir="^repodir; "--match=hash "^hash|]) in
     exec cmd
 
   let get_wdiff repodir page hash =
-    let sh = sprintf "darcs diff --store-in-memory -u --quiet '--repodir=%s' '--match=hash %s' '%s' | %s"
+    let sh = sprintf "nice -n10 ionice -c3 darcs diff --store-in-memory -u --quiet '--repodir=%s' '--match=hash %s' '%s' | %s"
       (quote repodir) (quote hash) (quote page) wdiff_cmd in
     let cmd = Lwt_process.shell sh in
     exec cmd
@@ -179,10 +190,14 @@ struct
 
   let get_summary repodir path =
     let cmd =
-      let args =
+      (*let args =
         [|"darcs"; "changes"; "--quiet"; "--summary"; "--xml-output";
           "--repodir="^repodir; path|] in
-      ("darcs", args) in
+      ("darcs", args) in*)
+      let args =
+        [|"nice"; "-n10"; "ionice"; "-c3"; "darcs"; "changes"; "--quiet"; "--summary"; "--xml-output";
+          "--repodir="^repodir; path|] in
+      ("nice", args) in
     catch (fun () ->
       exec cmd >|= fun str ->
       let process_summary =
