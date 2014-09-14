@@ -407,10 +407,10 @@ value send_chunk ?content_type request chunk =
     } in
   send_body_or_304 request chunk send_body;
 
-value cache_responce request chunk =
-  let send_responce last_modified =
+value cache_response request chunk =
+  let send_response last_modified =
     !!(chunk.body) last_modified in
-  send_body_or_304 request chunk send_responce;
+  send_body_or_304 request chunk send_response;
 
 value render_full_atom request file =
   let make_iri hash = absolutify request.hostname & url_to_full_change hash in
@@ -499,7 +499,7 @@ value my_func segpath rq =
             return (Mtime mtime))
           (fun _ -> return AlwaysFresh) >>= fun mtime ->
         let body = lazy (main_handler file request) in
-        cache_responce request { mtime; body }
+        cache_response request { mtime; body }
     | _ -> Lwt.return send_404 ] )
   (fun e ->
     Lwt_io.eprintf "ERROR: Responce failed with %s\n" (Printexc.to_string e) >>= fun () ->
