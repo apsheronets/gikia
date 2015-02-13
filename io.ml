@@ -54,7 +54,7 @@ let exec ?(timeout=timeout) cmd =
   then return out
   else fail (Error (sprintf "%s: %s" (string_of_cmd cmd) err))
 
-let pool = Lwt_pool.create 50 (fun () -> return ())
+let pool = Lwt_pool.create 20 (fun () -> return ())
 
 let exec ?timeout cmd =
   Lwt_pool.use pool (fun () -> exec ?timeout cmd)
