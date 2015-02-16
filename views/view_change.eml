@@ -2,6 +2,6 @@
 % let f a buf = begin
   <% Header_table.f a buf; %>
   <h1><%= a#title %></h1>
-  <p><%=raw link_to (url_to_full_change a#hash) "See also the wholly patch" %></p>
+  <p><%=raw link_to (url_to_full_change a#hash) "See also the whole patch" %></p>
   <pre class="diff"><%=raw a#wdiff %></pre>
 % end
