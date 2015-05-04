@@ -397,7 +397,7 @@ value send_chunk ?content_type request chunk =
       [ None -> [("Content-Type", "text/html")]
       | Some s -> [("Content-Type", s)] ] in
     let cache_control =
-      ("Cache-Control", "max-age=7200, public, must-revalidate") in
+      ("Cache-Control", "public, must-revalidate") in
     let rs_all =
       [last_modified::[cache_control::rs_all]] in
     !!(chunk.body) >|= fun body ->
